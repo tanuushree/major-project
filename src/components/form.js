@@ -1,178 +1,173 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
-function DynamicFormBuilder() {
-  const [sections, setSections] = useState([]);
+const Form = () => {
+  const [fields, setFields] = useState([]); // Holds the dynamic form fields
+  const [errors, setErrors] = useState([]); // Holds error messages for each field
 
-  const addSection = () => {
-    setSections([
-      ...sections,
-      {
-        name: '',
-        type: 'text',
-        fields: [],
-      },
-    ]);
+  // Handles adding a new field
+  const handleAddField = () => {
+    setFields([...fields, { type: "", name: "", value: "" }]);
+    setErrors([...errors, ""]); // Initialize with no error
   };
 
-  const addField = (sectionIndex) => {
-    const updatedSections = [...sections];
-    updatedSections[sectionIndex].fields.push({
-      label: '',
-      type: updatedSections[sectionIndex].type,
-      placeholder: '',
-    });
-    setSections(updatedSections);
+  // Handles updating the field type
+  const handleFieldTypeChange = (index, value) => {
+    const updatedFields = [...fields];
+    updatedFields[index].type = value;
+    setFields(updatedFields);
+    validateField(index, updatedFields[index].value, value); // Re-validate when type changes
   };
 
-  const handleSectionTypeChange = (index, event) => {
-    const updatedSections = [...sections];
-    updatedSections[index].type = event.target.value;
-    setSections(updatedSections);
+  // Handles updating the field value
+  const handleFieldValueChange = (index, value) => {
+    const updatedFields = [...fields];
+    updatedFields[index].value = value;
+    setFields(updatedFields);
+    validateField(index, value, fields[index].type); // Validate the field value
   };
 
-  const handleFieldLabelChange = (sectionIndex, fieldIndex, event) => {
-    const updatedSections = [...sections];
-    updatedSections[sectionIndex].fields[fieldIndex].label = event.target.value;
-    setSections(updatedSections);
+  // Validate field based on its type
+  const validateField = (index, value, type) => {
+    let errorMessage = "";
+
+    switch (type) {
+      case "text":
+        if (!/^[a-zA-Z\s]*$/.test(value)) {
+          errorMessage = "Please enter valid text.";
+        }
+        break;
+      case "number":
+        if (!/^\d+$/.test(value)) {
+          errorMessage = "Please enter a valid phone number.";
+        }
+        break;
+      case "date":
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+          errorMessage = "Please enter a valid date (YYYY-MM-DD).";
+        }
+        break;
+      default:
+        if (value) {
+          errorMessage = "Invalid data type selected.";
+        }
+    }
+
+    const updatedErrors = [...errors];
+    updatedErrors[index] = errorMessage;
+    setErrors(updatedErrors);
   };
+
+  const getPlaceholder = (type) => {
+    switch (type) {
+      case "text":
+        return "Enter text";
+      case "number":
+        return "Enter phone number";
+      case "date":
+        return "Select date";
+      default:
+        return "Enter field value";
+    }
+  };
+
+  const getLabel = (type) => {
+    switch (type) {
+      case "text":
+        return "Name";
+      case "number":
+        return "Mobile Number";
+      case "date":
+        return "Date";
+      default:
+        return "Field Type";
+    }
+  };
+
+  // Check if there are any errors
+  const hasErrors = errors.some((error) => error);
 
   return (
-    <div className="max-w-4xl mx-auto p-8 bg-gray-50 rounded-lg shadow-lg">
-      <header className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">📝 Form</h1>
-        <button
-          onClick={addSection}
-          className="bg-black text-white px-6 py-3 rounded-md hover:bg-gray-800"
-        >
-          Create Form
-        </button>
-      </header>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      {/* Form Container */}
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-4 text-center">Form</h1>
 
-      <div className="space-y-8">
-        {sections.map((section, sectionIndex) => (
-          <div
-            key={sectionIndex}
-            className="bg-white shadow-md rounded-lg p-6 border border-gray-300"
+        {/* Add Field Section */}
+        <div className="mb-6 text-center">
+          <button
+            onClick={handleAddField}
+            className="px-4 py-2 bg-blue-500 text-white font-medium rounded-md hover:bg-blue-600"
           >
-            <div className="flex justify-between items-center mb-4">
-              <input
-                type="text"
-                placeholder="Section Name"
-                value={section.name}
-                onChange={(e) => {
-                  const updatedSections = [...sections];
-                  updatedSections[sectionIndex].name = e.target.value;
-                  setSections(updatedSections);
-                }}
-                className="w-3/4 border border-gray-300 rounded-md p-2 text-lg"
-              />
-              <select
-                onChange={(e) => handleSectionTypeChange(sectionIndex, e)}
-                className="border border-gray-300 rounded-md p-2"
-              >
-                <option value="text">Text Field</option>
-                <option value="number">Number Field</option>
-                <option value="date">Date Field</option>
-                <option value="time">Time Field</option>
-                <option value="checkbox">Multiple Choice Field</option>
-                <option value="radio">Single Choice Field</option>
-                <option value="map">Location Field</option>
-              </select>
-            </div>
+            Add Field
+          </button>
+        </div>
 
-            <button
-              onClick={() => addField(sectionIndex)}
-              className="mb-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-            >
-              Add Field
-            </button>
-
-            <div className="grid grid-cols-2 gap-6">
-              {section.fields.map((field, fieldIndex) => (
-                <div
-                  key={fieldIndex}
-                  className="bg-gray-100 p-4 rounded-lg border border-gray-300"
+        {/* Dynamic Fields with Labels */}
+        <div>
+          {fields.map((field, index) => (
+            <div key={index} className="relative mb-6">
+              {/* Label for the Field */}
+              {field.type && (
+                <label
+                  className="absolute top-0 left-1 text-sm font-medium text-gray-700 bg-white px-1"
+                  style={{ transform: "translateY(-50%)" }}
                 >
-                  <input
-                    type="text"
-                    placeholder="Field Label"
-                    value={field.label}
-                    onChange={(e) =>
-                      handleFieldLabelChange(sectionIndex, fieldIndex, e)
-                    }
-                    className="w-full border border-gray-300 rounded-md p-2 mb-2"
-                  />
-                  {section.type === 'text' && (
-                    <input
-                      type="text"
-                      placeholder="Enter text"
-                      className="w-full border border-gray-300 rounded-md p-2"
-                    />
-                  )}
-                  {section.type === 'number' && (
-                    <input
-                      type="number"
-                      placeholder="Enter number"
-                      className="w-full border border-gray-300 rounded-md p-2"
-                    />
-                  )}
-                  {section.type === 'date' && (
-                    <input
-                      type="date"
-                      className="w-full border border-gray-300 rounded-md p-2"
-                    />
-                  )}
-                  {section.type === 'time' && (
-                    <input
-                      type="time"
-                      className="w-full border border-gray-300 rounded-md p-2"
-                    />
-                  )}
-                  {section.type === 'checkbox' && (
-                    <div>
-                      <input type="checkbox" id={`checkbox-${fieldIndex}`} />
-                      <label
-                        htmlFor={`checkbox-${fieldIndex}`}
-                        className="ml-2"
-                      >
-                        Option
-                      </label>
-                    </div>
-                  )}
-                  {section.type === 'radio' && (
-                    <div>
-                      <input type="radio" id={`radio-${fieldIndex}`} />
-                      <label htmlFor={`radio-${fieldIndex}`} className="ml-2">
-                        Option
-                      </label>
-                    </div>
-                  )}
-                  {section.type === 'map' && (
-                    <div className="rounded border overflow-hidden">
-                      <img
-                        src="https://via.placeholder.com/300x100.png?text=Map+Field"
-                        alt="Map placeholder"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+                  {getLabel(field.type)}
+                </label>
+              )}
 
-      {sections.length > 0 && (
-        <button
-          className="w-full mt-8 bg-green-500 text-white p-4 rounded-md text-lg hover:bg-green-600"
-          onClick={() => console.log(sections)}
-        >
-          Submit Form
-        </button>
-      )}
+              
+
+              {/* Input Field */}
+              <div className="flex flex-col space-y-2">
+                <input
+                  type={field.type === "date" ? "date" : "text"}
+                  placeholder={getPlaceholder(field.type)}
+                  value={field.value}
+                  onChange={(e) =>
+                    handleFieldValueChange(index, e.target.value)
+                  }
+                  className={`w-full p-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 ${
+                    errors[index] ? "border-red-500" : ""
+                  }`}
+                />
+              </div>
+              {/* Dropdown for Data Type */}
+              <select
+                value={field.type}
+                onChange={(e) => handleFieldTypeChange(index, e.target.value)}
+                className="w-full p-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="" disabled>
+                  Choose Data Type
+                </option>
+                <option value="text">Text</option>
+                <option value="number">Phone Number</option>
+                <option value="date">Date</option>
+              </select>
+
+              {/* Error Message */}
+              {errors[index] && (
+                <p className="text-red-500 text-sm mt-1">{errors[index]}</p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Save Button */}
+        {!hasErrors && fields.length > 0 && (
+          <div className="text-center mt-6">
+            <button
+              onClick={() => alert("Form Saved!")}
+              className="px-6 py-2 bg-green-500 text-white font-medium rounded-md hover:bg-green-600"
+            >
+              Save
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
-}
+};
 
-export default DynamicFormBuilder;
+export default Form;
