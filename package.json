@@ -15,7 +15,8 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-router-dom": "6.17.0",
-    "run-script": "^0.1.1"
+    "run-script": "^0.1.1",
+    "uuid": "^11.0.5"
   },
   "devDependencies": {
     "@types/react": "18.2.31",
