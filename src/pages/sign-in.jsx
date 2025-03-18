@@ -1,18 +1,43 @@
 import {
   Input,
-  Checkbox,
   Button,
   Typography,
+  Alert,
 } from "@material-tailwind/react";
 import { Link, useNavigate } from "react-router-dom";
-
+import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 export function SignIn() {
-
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSignIn = () => {
-    navigate("/project");
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      await login(formData.email, formData.password);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.error || "Failed to sign in. Please check your credentials.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -22,13 +47,23 @@ export function SignIn() {
           <Typography variant="h2" className="font-bold mb-4">Sign In</Typography>
           <Typography variant="paragraph" color="blue-gray" className="text-lg font-normal">Enter your email and password to Sign In.</Typography>
         </div>
-        <form className="mt-8 mb-2 mx-auto w-80 max-w-screen-lg lg:w-1/2">
+        {error && (
+          <Alert color="red" className="mt-4 mx-auto w-80 max-w-screen-lg lg:w-1/2">
+            {error}
+          </Alert>
+        )}
+        <form className="mt-8 mb-2 mx-auto w-80 max-w-screen-lg lg:w-1/2" onSubmit={handleSignIn}>
           <div className="mb-1 flex flex-col gap-6">
             <Typography variant="small" color="blue-gray" className="-mb-3 font-medium">
               Your email
             </Typography>
             <Input
               size="lg"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
               placeholder="name@mail.com"
               className=" !border-t-blue-gray-200 focus:!border-t-gray-900"
               labelProps={{
@@ -40,7 +75,11 @@ export function SignIn() {
             </Typography>
             <Input
               type="password"
+              name="password"
               size="lg"
+              value={formData.password}
+              onChange={handleChange}
+              required
               placeholder="********"
               className=" !border-t-blue-gray-200 focus:!border-t-gray-900"
               labelProps={{
@@ -49,27 +88,20 @@ export function SignIn() {
             />
           </div>
          
-          <Button className="mt-6" fullWidth onClick={handleSignIn}>
-            Sign In
+          <Button 
+            type="submit" 
+            className="mt-6" 
+            fullWidth 
+            disabled={loading}
+          >
+            {loading ? "Signing in..." : "Sign In"}
           </Button>
 
           <div className="flex items-center justify-between gap-2 mt-6">
-            {/* <Checkbox
-              label={
-                <Typography
-                  variant="small"
-                  color="gray"
-                  className="flex items-center justify-start font-medium"
-                >
-                  Subscribe me to newsletter
-                </Typography>
-              }
-              containerProps={{ className: "-ml-2.5" }}
-            /> */}
             <Typography variant="small" className="font-medium text-gray-900">
-              <a href="#">
+              <Link to="/forgot-password">
                 Forgot Password
-              </a>
+              </Link>
             </Typography>
           </div>
           <div className="space-y-4 mt-8">
@@ -89,25 +121,20 @@ export function SignIn() {
               </svg>
               <span>Sign in With Google</span>
             </Button>
-            {/* <Button size="lg" color="white" className="flex items-center gap-2 justify-center shadow-md" fullWidth>
-              <img src="/img/twitter-logo.svg" height={24} width={24} alt="" />
-              <span>Sign in With Twitter</span>
-            </Button> */}
           </div>
           <Typography variant="paragraph" className="text-center text-blue-gray-500 font-medium mt-4">
             Not registered?
             <Link to="/sign-up" className="text-gray-900 ml-1">Create account</Link>
           </Typography>
         </form>
-
       </div>
       <div className="w-2/5 h-full hidden lg:block">
         <img
           src="/img/sigin.jpeg"
           className="h-full w-full object-cover rounded-3xl"
+          alt="Sign in"
         />
       </div>
-
     </section>
   );
 }
