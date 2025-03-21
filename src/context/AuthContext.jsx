@@ -27,12 +27,16 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     setLoading(true);
     try {
-      // Add your authentication logic here
-      // For now, we'll just set a mock user
-      const user = { email, id: Date.now() };
-      setCurrentUser(user);
-      return user;
+      // Use the actual authService login instead of mock data
+      const response = await authService.login(email, password);
+      
+      // Set the current user with the response data
+      setCurrentUser(response.user);
+      
+      // The token is already being handled in authService.login
+      return response;
     } catch (error) {
+      console.error('Login error in AuthContext:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -40,6 +44,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    authService.logout(); // This will remove the token
     setCurrentUser(null);
     localStorage.removeItem('currentUser');
   };

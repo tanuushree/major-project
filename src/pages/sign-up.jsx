@@ -36,10 +36,11 @@ export function SignUp() {
     setError("");
     
     try {
-      await authService.register(name, email, password);
-      // After successful registration, redirect to sign-in
+      const response = await authService.register(name, email, password);
+      console.log('Registration successful:', response);
       navigate("/sign-in");
     } catch (err) {
+      console.error('Registration error:', err);
       setError(err.error || "Registration failed. Please try again.");
     } finally {
       setLoading(false);
