@@ -32,7 +32,7 @@ export function SignIn() {
 
     try {
       await login(formData.email, formData.password);
-      navigate("/dashboard");
+      navigate("/");
     } catch (err) {
       setError(err.error || "Failed to sign in. Please check your credentials.");
     } finally {

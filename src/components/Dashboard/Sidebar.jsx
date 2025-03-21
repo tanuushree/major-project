@@ -10,6 +10,7 @@ import {
   QuestionMarkCircleIcon,
   Cog6ToothIcon
 } from "@heroicons/react/24/solid";
+import { useAuth } from "../../context/AuthContext";
 
 const navItems = [
   { icon: Squares2X2Icon, label: 'Dashboards', path: '/dashboard' },
@@ -21,17 +22,36 @@ const navItems = [
 ];
 
 const bottomNavItems = [
-  { icon: Squares2X2Icon, label: 'Production', path: '/production' },
   { icon: QuestionMarkCircleIcon, label: 'Get Help', path: '/help' },
   { icon: Cog6ToothIcon, label: 'Configure', path: '/configure' },
 ];
 
 export function Sidebar() {
+  const { currentUser } = useAuth();
+  
+  // Get the first letter of the user's name or email
+  const getUserInitial = () => {
+    if (currentUser) {
+      if (currentUser.name) {
+        return currentUser.name.charAt(0).toUpperCase();
+      }
+      // Fallback to email's first letter if name is not available
+      return currentUser.email.charAt(0).toUpperCase();
+    }
+    return '?';
+  };
+
   return (
     <div className="fixed left-0 top-0 h-screen w-16 bg-[#1a1f2e] flex flex-col items-center text-white">
       <div className="p-4">
         <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-          <span className="text-[#1a1f2e] font-bold">u</span>
+          <span className="text-[#1a1f2e] font-bold text-lg">
+            {getUserInitial()}
+          </span>
+        </div>
+        {/* Optional: Add tooltip to show full name on hover */}
+        <div className="absolute left-16 bg-gray-800 px-2 py-1 rounded text-sm opacity-0 hover:opacity-100 transition-opacity">
+          {currentUser?.name || currentUser?.email}
         </div>
       </div>
       

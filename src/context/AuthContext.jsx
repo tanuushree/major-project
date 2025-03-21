@@ -27,16 +27,18 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     setLoading(true);
     try {
-      // Use the actual authService login instead of mock data
       const response = await authService.login(email, password);
-      
-      // Set the current user with the response data
-      setCurrentUser(response.user);
-      
-      // The token is already being handled in authService.login
+      // Make sure the response includes the user's name
+      const user = {
+        name: response.user.name, // Make sure this is included in the backend response
+        email: response.user.email,
+        id: response.user.id
+      };
+      setCurrentUser(user);
+      localStorage.setItem('currentUser', JSON.stringify(user));
       return response;
     } catch (error) {
-      console.error('Login error in AuthContext:', error);
+      console.error('Login error:', error);
       throw error;
     } finally {
       setLoading(false);

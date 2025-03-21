@@ -1,12 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Button, Card, Input, Select, Option, Dialog } from "@material-tailwind/react";
+import { Button, Card, Input, Select, Option, Dialog, Alert, Spinner } from "@material-tailwind/react";
+import api from "../services/api";
 
 function FormDetailPage() {
   const { projectName, formId } = useParams(); // Get project and form ID from URL
   const navigate = useNavigate();
-
+  const [form, setForm] = useState(null);
   const [sections, setSections] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState("");
+
   const [openSectionDialog, setOpenSectionDialog] = useState(false);
   const [sectionName, setSectionName] = useState("");
 
@@ -16,6 +21,48 @@ function FormDetailPage() {
 
   // Data types for the dropdown
   const dataTypes = ["Text", "Number", "Date", "Boolean", "Dropdown"];
+
+  useEffect(() => {
+    if (formId) {
+      fetchFormData();
+    }
+  }, [formId]);
+
+  const fetchFormData = async () => {
+    try {
+      const response = await api.get(`/forms/${formId}`);
+      setForm(response.data);
+      setSections(response.data.sections || []);
+    } catch (err) {
+      setError("Failed to fetch form data");
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+      
+      const updatedForm = {
+        ...form,
+        sections
+      };
+
+      if (formId) {
+        await api.put(`/forms/${formId}`, updatedForm);
+      } else {
+        await api.post('/forms', updatedForm);
+      }
+
+      setSuccessMessage("Form saved successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err) {
+      setError("Failed to save form");
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Add a new section
   const createSection = () => {
@@ -51,6 +98,38 @@ function FormDetailPage() {
 
         {/* Form Name (Emphasized) */}
         <h2 className="text-3xl font-bold text-center py-4">{formId}</h2>
+
+        {/* Add these elements near the top of your content */}
+        {error && (
+          <Alert color="red" className="mb-4" dismissible={{
+            onClose: () => setError(null)
+          }}>
+            {error}
+          </Alert>
+        )}
+        
+        {successMessage && (
+          <Alert color="green" className="mb-4" dismissible={{
+            onClose: () => setSuccessMessage("")
+          }}>
+            {successMessage}
+          </Alert>
+        )}
+
+        <div className="flex justify-end mb-4">
+          <Button
+            onClick={handleSave}
+            className="bg-green-500 hover:bg-green-600"
+            disabled={saving}
+          >
+            {saving ? (
+              <div className="flex items-center gap-2">
+                <Spinner className="h-4 w-4" />
+                Saving...
+              </div>
+            ) : 'Save Form'}
+          </Button>
+        </div>
 
         {/* Create Section Button */}
         <Button onClick={() => setOpenSectionDialog(true)} className="bg-white text-black w-full sm:w-auto">
