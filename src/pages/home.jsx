@@ -206,45 +206,7 @@ export function Home() {
           </div>
         </section>
       </ScrollTrigger>
-      <ScrollTrigger onEnter={() => setVisibleSection(prev => ({ ...prev, contact: true }))}>
-        <section className={`relative bg-white py-24 px-4 transition-all duration-1000 ${
-          visibleSection.contact ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'
-        }`}>
-          <div className="container mx-auto">
-            <PageTitle section="Contact Us" heading="Take the First Step Towards Smarter Operations">
-            Invite NGOs to sign up, or contribute to the open-source project.
-            </PageTitle>
-            <form className="mx-auto w-full mt-12 lg:w-5/12">
-              <div className="mb-8 flex gap-8">
-                <Input variant="outlined" size="lg" label="Full Name" />
-                <Input variant="outlined" size="lg" label="Email Address" />
-              </div>
-              <Textarea variant="outlined" size="lg" label="Message" rows={8} />
-              <Checkbox
-                label={
-                  <Typography
-                    variant="small"
-                    color="gray"
-                    className="flex items-center font-normal"
-                  >
-                    I agree the
-                    <a
-                      href="#"
-                      className="font-medium transition-colors hover:text-gray-900"
-                    >
-                      &nbsp;Terms and Conditions
-                    </a>
-                  </Typography>
-                }
-                containerProps={{ className: "-ml-2.5" }}
-              />
-              <Button variant="gradient" size="lg" className="mt-8" fullWidth>
-                Send Message
-              </Button>
-            </form>
-          </div>
-        </section>
-      </ScrollTrigger>
+      
       <div className="bg-white">
         <Footer />
       </div>
