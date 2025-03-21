@@ -12,7 +12,7 @@ import {
   Alert,
   Spinner,
 } from "@material-tailwind/react";
-import { PlusIcon } from "@heroicons/react/24/solid";
+import { PlusIcon, ChartBarIcon } from "@heroicons/react/24/solid";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -25,6 +25,7 @@ function Project() {
   const [openDialog, setOpenDialog] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(null);
 
   useEffect(() => {
     if (!currentUser) {
@@ -90,6 +91,25 @@ function Project() {
     navigate(`/forms/${projectName}`);
   };
 
+  const handleOpenDashboard = (projectId) => {
+    navigate(`/dashboard/${projectId}`);
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    try {
+      setDeleteLoading(projectId);
+      // Mock API call for now
+      const newProjects = projects.filter((project) => project.id !== projectId);
+      setProjects(newProjects);
+      setError("");
+    } catch (err) {
+      console.error("Error deleting project:", err);
+      setError("Failed to delete project. Please try again.");
+    } finally {
+      setDeleteLoading(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-black">
@@ -126,22 +146,42 @@ function Project() {
 
         {/* Projects Grid */}
         {projects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
               <Card key={project.id} className="bg-gray-800 text-white">
                 <CardBody>
                   <Typography variant="h5" className="mb-2">{project.name}</Typography>
-                  <Typography className="text-gray-300">
+                  <Typography className="text-gray-300 mb-4">
                     {project.description || "No description provided"}
                   </Typography>
+                  <div className="flex items-center gap-2 text-blue-400">
+                    <ChartBarIcon className="h-5 w-5" />
+                    <button
+                      onClick={() => handleOpenDashboard(project.id)}
+                      className="text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      View Analytics
+                    </button>
+                  </div>
                 </CardBody>
-                <CardFooter className="pt-0">
+                <CardFooter className="pt-0 flex justify-between gap-2">
                   <Button 
-                    fullWidth
-                    className="bg-white text-black"
+                    className="bg-white text-black flex-1"
                     onClick={() => handleOpenProject(project.name)}
                   >
                     Open Project
+                  </Button>
+                  <Button 
+                    className="bg-red-500 text-white"
+                    onClick={() => handleDeleteProject(project.id)}
+                    disabled={deleteLoading === project.id}
+                  >
+                    {deleteLoading === project.id ? (
+                      <div className="flex items-center gap-2">
+                        <Spinner className="h-4 w-4" />
+                        <span>Deleting...</span>
+                      </div>
+                    ) : 'Delete'}
                   </Button>
                 </CardFooter>
               </Card>

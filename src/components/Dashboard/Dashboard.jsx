@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Card,
   Typography,
@@ -28,6 +28,7 @@ import {
   Legend
 } from 'chart.js';
 import { Sidebar } from './Sidebar';
+import api from '../../services/api';
 
 ChartJS.register(
   CategoryScale,
@@ -40,10 +41,24 @@ ChartJS.register(
 );
 
 export function Dashboard() {
+  const { projectId } = useParams();
   const navigate = useNavigate();
   const [segment, setSegment] = useState("All Segments");
   const [timePeriod, setTimePeriod] = useState("Last 180 days");
   const [chartView, setChartView] = useState("Monthly");
+
+  useEffect(() => {
+    const fetchProjectData = async () => {
+      try {
+        const response = await api.get(`/projects/${projectId}/analytics`);
+        // Update your dashboard data with the response
+      } catch (error) {
+        console.error('Error fetching project data:', error);
+      }
+    };
+
+    fetchProjectData();
+  }, [projectId]);
 
   const handleEditClick = () => {
     navigate('/project');

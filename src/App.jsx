@@ -11,6 +11,7 @@ import { SignUp } from "./pages/sign-up";
 import { Home } from "./pages/home";
 import { DashboardPage } from "./pages/dashboard";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { SavedFormsPage } from "./pages/SavedFormsPage";
 
 function App() {
   const { pathname } = useLocation();
@@ -24,13 +25,17 @@ function App() {
       )}
 
       <Routes>
-        {/* Landing page redirect */}
-        <Route path="/" element={<Home />} />
+        {/* Change default route to project page */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Project />
+          </ProtectedRoute>
+        } />
         <Route path="/sign-in" element={<SignIn />} />
         <Route path="/sign-up" element={<SignUp />} />
         
-        {/* Protected Routes */}
-        <Route path="/dashboard" element={
+        {/* Other protected routes */}
+        <Route path="/dashboard/:projectId" element={
           <ProtectedRoute>
             <DashboardPage />
           </ProtectedRoute>
@@ -50,6 +55,14 @@ function App() {
             <FormDetailPage />
           </ProtectedRoute>
         } />
+        <Route 
+          path="/saved-forms" 
+          element={
+            <ProtectedRoute>
+              <SavedFormsPage />
+            </ProtectedRoute>
+          } 
+        />
 
         {/* Dynamic Routes */}
         {routes.map(
