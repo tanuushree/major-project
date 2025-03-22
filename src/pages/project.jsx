@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { projectService } from "@/services/api";
 import {
   Typography,
   Button,
@@ -13,7 +14,7 @@ import {
   Spinner,
 } from "@material-tailwind/react";
 import { PlusIcon, ChartBarIcon } from "@heroicons/react/24/solid";
-import api from "../services/api";
+
 import { useAuth } from "../context/AuthContext";
 
 function Project() {
@@ -38,17 +39,13 @@ function Project() {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      // Mock API call for now
-      const mockProjects = [
-        { id: 1, name: "Project 1", description: "Description 1" },
-        { id: 2, name: "Project 2", description: "Description 2" },
-      ];
-      setProjects(mockProjects);
+      const projects = await projectService.getProjects();
+      setProjects(projects || []);
       setError("");
     } catch (err) {
       console.error("Error fetching projects:", err);
-      setError("Failed to load projects. Please try again.");
-      if (err.response?.status === 401) {
+      setError(err.error || "Failed to load projects. Please try again.");
+      if (err.status === 401) {
         logout();
         navigate("/sign-in");
       }
@@ -64,21 +61,23 @@ function Project() {
     }
 
     try {
-      // Mock API call for now
-      const newProject = {
-        id: Date.now(),
-        name: projectName,
+      const newProject = await projectService.createProject({
+        name: projectName.trim(),
         description: projectDescription,
-      };
+      });
       
       setProjects([...projects, newProject]);
       setProjectName("");
       setProjectDescription("");
       setOpenDialog(false);
       setError("");
+
+      const encodedProjectName = encodeURIComponent(newProject.name);
+      localStorage.setItem('currentProjectId', newProject.id);
+      navigate(`/${encodedProjectName}`);
     } catch (err) {
       console.error("Error creating project:", err);
-      setError("Failed to create project. Please try again.");
+      setError(err.error || "Failed to create project. Please try again.");
     }
   };
 
@@ -87,8 +86,15 @@ function Project() {
     navigate("/sign-in");
   };
 
-  const handleOpenProject = (projectName) => {
-    navigate(`/forms/${projectName}`);
+  const handleOpenProject = (project) => {
+    if (!project || !project.name) {
+      console.error('Invalid project data');
+      return;
+    }
+    const encodedProjectName = encodeURIComponent(project.name);
+    localStorage.setItem('currentProjectId', project.id);
+    console.log('Opening project:', project.name, 'with ID:', project.id);
+    navigate(`/${encodedProjectName}`);
   };
 
   const handleOpenDashboard = (projectId) => {
@@ -167,7 +173,7 @@ function Project() {
                 <CardFooter className="pt-0 flex justify-between gap-2">
                   <Button 
                     className="bg-white text-black flex-1"
-                    onClick={() => handleOpenProject(project.name)}
+                    onClick={() => handleOpenProject(project)}
                   >
                     Open Project
                   </Button>

@@ -10,40 +10,23 @@ import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../services/api";
 
 export function SignUp() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
+  const [error, setError] = useState('');
   const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [agreeToTerms, setAgreeToTerms] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const handleSignUp = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Basic validation
-    if (!name || !email || !password) {
-      setError("Please fill in all fields");
-      return;
-    }
-    
-    if (!agreeToTerms) {
-      setError("You must agree to the Terms and Conditions");
-      return;
-    }
-    
-    setLoading(true);
-    setError("");
-    
+    setError('');
+
     try {
-      const response = await authService.register(name, email, password);
-      console.log('Registration successful:', response);
-      navigate("/sign-in");
+      await authService.register(formData.name, formData.email, formData.password);
+      navigate('/');
     } catch (err) {
-      console.error('Registration error:', err);
-      setError(err.error || "Registration failed. Please try again.");
-    } finally {
-      setLoading(false);
+      setError(err.message || 'Registration failed');
     }
   };
 
@@ -60,7 +43,7 @@ export function SignUp() {
           <Typography variant="h2" className="font-bold mb-4">Join Us Today</Typography>
           <Typography variant="paragraph" color="blue-gray" className="text-lg font-normal">Enter your details to register.</Typography>
         </div>
-        <form className="mt-8 mb-2 mx-auto w-80 max-w-screen-lg lg:w-1/2" onSubmit={handleSignUp}>
+        <form className="mt-8 mb-2 mx-auto w-80 max-w-screen-lg lg:w-1/2" onSubmit={handleSubmit}>
           {error && (
             <Alert color="red" className="mb-4">
               {error}
@@ -74,8 +57,8 @@ export function SignUp() {
             <Input
               size="lg"
               placeholder="John Doe"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
               className=" !border-t-blue-gray-200 focus:!border-t-gray-900"
               labelProps={{
                 className: "before:content-none after:content-none",
@@ -91,8 +74,8 @@ export function SignUp() {
               type="email"
               size="lg"
               placeholder="name@mail.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
               className=" !border-t-blue-gray-200 focus:!border-t-gray-900"
               labelProps={{
                 className: "before:content-none after:content-none",
@@ -109,8 +92,8 @@ export function SignUp() {
               type="password"
               size="lg"
               placeholder="********"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
               className=" !border-t-blue-gray-200 focus:!border-t-gray-900"
               labelProps={{
                 className: "before:content-none after:content-none",
@@ -119,34 +102,12 @@ export function SignUp() {
             />
           </div>
           
-          <Checkbox
-            label={
-              <Typography
-                variant="small"
-                color="gray"
-                className="flex items-center justify-start font-medium"
-              >
-                I agree the&nbsp;
-                <a
-                  href="#"
-                  className="font-normal text-black transition-colors hover:text-gray-900 underline"
-                >
-                  Terms and Conditions
-                </a>
-              </Typography>
-            }
-            checked={agreeToTerms}
-            onChange={() => setAgreeToTerms(!agreeToTerms)}
-            containerProps={{ className: "-ml-2.5" }}
-          />
-          
           <Button 
             className="mt-6" 
             fullWidth 
             type="submit"
-            disabled={loading}
           >
-            {loading ? "Registering..." : "Register Now"}
+            Sign Up
           </Button>
 
           <div className="space-y-4 mt-8">

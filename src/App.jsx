@@ -25,34 +25,33 @@ function App() {
       )}
 
       <Routes>
-        {/* Change default route to project page */}
+        {/* Root route shows projects list */}
         <Route path="/" element={
           <ProtectedRoute>
             <Project />
           </ProtectedRoute>
         } />
+
+        {/* Auth routes */}
         <Route path="/sign-in" element={<SignIn />} />
         <Route path="/sign-up" element={<SignUp />} />
         
-        {/* Other protected routes */}
-        <Route path="/dashboard/:projectId" element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/project" element={
-          <ProtectedRoute>
-            <Project />
-          </ProtectedRoute>
-        } />
-        <Route path="/forms/:projectName" element={
+        {/* Project and Form routes with new URL pattern */}
+        <Route path="/:projectName" element={
           <ProtectedRoute>
             <FormsPage />
           </ProtectedRoute>
         } />
-        <Route path="/form/:formId" element={
+        <Route path="/:projectName/:formId" element={
           <ProtectedRoute>
             <FormDetailPage />
+          </ProtectedRoute>
+        } />
+
+        {/* Other protected routes */}
+        <Route path="/dashboard/:projectId" element={
+          <ProtectedRoute>
+            <DashboardPage />
           </ProtectedRoute>
         } />
         <Route 
@@ -64,12 +63,7 @@ function App() {
           } 
         />
 
-        {/* Dynamic Routes */}
-        {routes.map(
-          ({ path, element }, key) =>
-            element && <Route key={key} exact path={path} element={element} />
-        )}
-
+        {/* Catch-all route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AuthProvider>
