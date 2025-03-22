@@ -129,7 +129,9 @@ function FormDetailPage() {
   };
 
   const handleOpenForm = () => {
-    navigate(`/${encodedProjectName}/forms/${formId}/open`);
+    navigate(`/project/${encodedProjectName}/form/${formId}/submissions`, {
+      state: { formName: formName }
+    });
   };
 
   useEffect(() => {
