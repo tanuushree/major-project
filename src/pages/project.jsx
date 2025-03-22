@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { projectService } from "@/services/api";
 import {
   Typography,
   Button,
@@ -12,8 +13,8 @@ import {
   Alert,
   Spinner,
 } from "@material-tailwind/react";
-import { PlusIcon } from "@heroicons/react/24/solid";
-import api from "../services/api";
+import { PlusIcon, ChartBarIcon } from "@heroicons/react/24/solid";
+
 import { useAuth } from "../context/AuthContext";
 
 function Project() {
@@ -25,6 +26,7 @@ function Project() {
   const [openDialog, setOpenDialog] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(null);
 
   useEffect(() => {
     if (!currentUser) {
@@ -37,17 +39,13 @@ function Project() {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      // Mock API call for now
-      const mockProjects = [
-        { id: 1, name: "Project 1", description: "Description 1" },
-        { id: 2, name: "Project 2", description: "Description 2" },
-      ];
-      setProjects(mockProjects);
+      const projects = await projectService.getProjects();
+      setProjects(projects || []);
       setError("");
     } catch (err) {
       console.error("Error fetching projects:", err);
-      setError("Failed to load projects. Please try again.");
-      if (err.response?.status === 401) {
+      setError(err.error || "Failed to load projects. Please try again.");
+      if (err.status === 401) {
         logout();
         navigate("/sign-in");
       }
@@ -63,21 +61,23 @@ function Project() {
     }
 
     try {
-      // Mock API call for now
-      const newProject = {
-        id: Date.now(),
-        name: projectName,
+      const newProject = await projectService.createProject({
+        name: projectName.trim(),
         description: projectDescription,
-      };
+      });
       
       setProjects([...projects, newProject]);
       setProjectName("");
       setProjectDescription("");
       setOpenDialog(false);
       setError("");
+
+      const encodedProjectName = encodeURIComponent(newProject.name);
+      localStorage.setItem('currentProjectId', newProject.id);
+      navigate(`/${encodedProjectName}`);
     } catch (err) {
       console.error("Error creating project:", err);
-      setError("Failed to create project. Please try again.");
+      setError(err.error || "Failed to create project. Please try again.");
     }
   };
 
@@ -86,8 +86,34 @@ function Project() {
     navigate("/sign-in");
   };
 
-  const handleOpenProject = (projectName) => {
-    navigate(`/forms/${projectName}`);
+  const handleOpenProject = (project) => {
+    if (!project || !project.name) {
+      console.error('Invalid project data');
+      return;
+    }
+    const encodedProjectName = encodeURIComponent(project.name);
+    localStorage.setItem('currentProjectId', project.id);
+    console.log('Opening project:', project.name, 'with ID:', project.id);
+    navigate(`/${encodedProjectName}`);
+  };
+
+  const handleOpenDashboard = (projectId) => {
+    navigate(`/dashboard/${projectId}`);
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    try {
+      setDeleteLoading(projectId);
+      // Mock API call for now
+      const newProjects = projects.filter((project) => project.id !== projectId);
+      setProjects(newProjects);
+      setError("");
+    } catch (err) {
+      console.error("Error deleting project:", err);
+      setError("Failed to delete project. Please try again.");
+    } finally {
+      setDeleteLoading(null);
+    }
   };
 
   if (loading) {
@@ -126,22 +152,42 @@ function Project() {
 
         {/* Projects Grid */}
         {projects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
               <Card key={project.id} className="bg-gray-800 text-white">
                 <CardBody>
                   <Typography variant="h5" className="mb-2">{project.name}</Typography>
-                  <Typography className="text-gray-300">
+                  <Typography className="text-gray-300 mb-4">
                     {project.description || "No description provided"}
                   </Typography>
+                  <div className="flex items-center gap-2 text-blue-400">
+                    <ChartBarIcon className="h-5 w-5" />
+                    <button
+                      onClick={() => handleOpenDashboard(project.id)}
+                      className="text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      View Analytics
+                    </button>
+                  </div>
                 </CardBody>
-                <CardFooter className="pt-0">
+                <CardFooter className="pt-0 flex justify-between gap-2">
                   <Button 
-                    fullWidth
-                    className="bg-white text-black"
-                    onClick={() => handleOpenProject(project.name)}
+                    className="bg-white text-black flex-1"
+                    onClick={() => handleOpenProject(project)}
                   >
                     Open Project
+                  </Button>
+                  <Button 
+                    className="bg-red-500 text-white"
+                    onClick={() => handleDeleteProject(project.id)}
+                    disabled={deleteLoading === project.id}
+                  >
+                    {deleteLoading === project.id ? (
+                      <div className="flex items-center gap-2">
+                        <Spinner className="h-4 w-4" />
+                        <span>Deleting...</span>
+                      </div>
+                    ) : 'Delete'}
                   </Button>
                 </CardFooter>
               </Card>

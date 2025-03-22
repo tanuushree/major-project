@@ -11,6 +11,7 @@ import { SignUp } from "./pages/sign-up";
 import { Home } from "./pages/home";
 import { DashboardPage } from "./pages/dashboard";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { SavedFormsPage } from "./pages/SavedFormsPage";
 
 function App() {
   const { pathname } = useLocation();
@@ -24,39 +25,45 @@ function App() {
       )}
 
       <Routes>
-        {/* Landing page redirect */}
-        <Route path="/" element={<Home />} />
-        <Route path="/sign-in" element={<SignIn />} />
-        <Route path="/sign-up" element={<SignUp />} />
-        
-        {/* Protected Routes */}
-        <Route path="/dashboard" element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/project" element={
+        {/* Root route shows projects list */}
+        <Route path="/" element={
           <ProtectedRoute>
             <Project />
           </ProtectedRoute>
         } />
-        <Route path="/forms/:projectName" element={
+
+        {/* Auth routes */}
+        <Route path="/sign-in" element={<SignIn />} />
+        <Route path="/sign-up" element={<SignUp />} />
+        
+        {/* Project and Form routes with new URL pattern */}
+        <Route path="/:projectName" element={
           <ProtectedRoute>
             <FormsPage />
           </ProtectedRoute>
         } />
-        <Route path="/form/:formId" element={
+        <Route path="/:projectName/:formId" element={
           <ProtectedRoute>
             <FormDetailPage />
           </ProtectedRoute>
         } />
 
-        {/* Dynamic Routes */}
-        {routes.map(
-          ({ path, element }, key) =>
-            element && <Route key={key} exact path={path} element={element} />
-        )}
+        {/* Other protected routes */}
+        <Route path="/dashboard/:projectId" element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        } />
+        <Route 
+          path="/saved-forms" 
+          element={
+            <ProtectedRoute>
+              <SavedFormsPage />
+            </ProtectedRoute>
+          } 
+        />
 
+        {/* Catch-all route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AuthProvider>

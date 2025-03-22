@@ -27,12 +27,18 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     setLoading(true);
     try {
-      // Add your authentication logic here
-      // For now, we'll just set a mock user
-      const user = { email, id: Date.now() };
+      const response = await authService.login(email, password);
+      // Make sure the response includes the user's name
+      const user = {
+        name: response.user.name, // Make sure this is included in the backend response
+        email: response.user.email,
+        id: response.user.id
+      };
       setCurrentUser(user);
-      return user;
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      return response;
     } catch (error) {
+      console.error('Login error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -40,6 +46,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    authService.logout(); // This will remove the token
     setCurrentUser(null);
     localStorage.removeItem('currentUser');
   };

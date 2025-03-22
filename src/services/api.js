@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
+  baseURL: 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -15,28 +15,15 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log('Making request:', config.method.toUpperCase(), config.url);
     return config;
   },
-  (error) => {
-    console.error('Request error:', error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Add a response interceptor
 api.interceptors.response.use(
-  (response) => {
-    console.log('Response received:', response.status, response.config.url);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error('Response error:', {
-      url: error.config?.url,
-      status: error.response?.status,
-      data: error.response?.data
-    });
-
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/sign-in';
@@ -45,80 +32,116 @@ api.interceptors.response.use(
   }
 );
 
-// Authentication services
+// Auth service
 export const authService = {
-  register: async (name, email, password) => {
+  async login(email, password) {
     try {
-      console.log('Attempting registration for:', email);
-      const response = await api.post('/auth/register', { name, email, password });
-      console.log('Registration response:', response);
-      return response.data;
-    } catch (error) {
-      console.error('Registration error:', error);
-      throw error.response?.data || { error: 'Registration failed' };
-    }
-  },
-  
-  login: async (email, password) => {
-    try {
-      console.log('Login request payload:', { email, password: '***' });
-      const response = await api.post('/auth/login', { 
-        email, 
-        password 
-      });
-      console.log('Login response data:', response.data);
-      
-      if (response.data && response.data.token) {
+      const response = await api.post('/auth/login', { email, password });
+      if (response.data.token) {
         localStorage.setItem('token', response.data.token);
-        api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-        return response.data;
-      } else {
-        throw new Error('No token received from server');
       }
-    } catch (error) {
-      console.error('Login error details:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
-      });
-      if (error.response?.data) {
-        throw error.response.data;
-      } else if (error.message) {
-        throw { error: error.message };
-      } else {
-        throw { error: 'Login failed' };
-      }
-    }
-  },
-  
-  forgotPassword: async (email) => {
-    try {
-      const response = await api.post('/auth/forgot-password', { email });
       return response.data;
     } catch (error) {
-      throw error.response?.data || { error: 'Failed to process request' };
+      throw error.response?.data || error.message;
     }
   },
-  
-  resetPassword: async (token, newPassword) => {
+
+  async register(name, email, password) {
     try {
-      const response = await api.post('/auth/reset-password', { 
-        token, 
-        password: newPassword 
-      });
+      const response = await api.post('/auth/register', { name, email, password });
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+      }
       return response.data;
     } catch (error) {
-      throw error.response?.data || { error: 'Password reset failed' };
+      throw error.response?.data || error.message;
     }
   },
-  
-  logout: () => {
+
+  logout() {
     localStorage.removeItem('token');
   },
-  
-  isAuthenticated: () => {
-    return !!localStorage.getItem('token');
+
+  getCurrentUser() {
+    const token = localStorage.getItem('token');
+    return token ? { token } : null;
   }
 };
 
-export default api; 
+export const formService = {
+  async getForms(projectId) {
+    try {
+      const response = await api.get(`/forms/${projectId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get forms error:', error);
+      throw error;
+    }
+  },
+
+  async createForm(formData) {
+    try {
+      const response = await api.post('/forms', formData);
+      return response.data;
+    } catch (error) {
+      console.error('Create form error:', error);
+      throw error;
+    }
+  },
+
+  async getFormsByProjectId(projectId) {
+    try {
+      const response = await api.get(`/forms/${projectId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get forms by project ID error:', error);
+      throw error;
+    }
+  },
+
+  async saveForm(formId, formData) {
+    try {
+      const response = await api.put(`/forms/${formId}`, formData);
+      return response.data;
+    } catch (error) {
+      console.error('Save form error:', error);
+      throw error;
+    }
+  },
+
+  async getFormById(formId) {
+    try {
+      const response = await api.get(`/forms/${formId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get form error:', error);
+      throw error;
+    }
+  }
+};
+
+
+// Project service
+export const projectService = {
+  async getProjects() {
+    try {
+      const response = await api.get('/projects');
+      return response.data;
+    } catch (error) {
+      console.error('Get projects error:', error);
+      throw error;
+    }
+  },
+
+  async createProject(projectData) {
+    try {
+      const response = await api.post('/projects', projectData);
+      return response.data;
+    } catch (error) {
+      console.error('Create project error:', error);
+      throw error;
+    }
+  }
+};
+
+export default api;
