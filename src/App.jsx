@@ -14,6 +14,8 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { SavedFormsPage } from "./pages/SavedFormsPage";
 import { Analytics } from "./pages/analytics";
 import OpenForm from "./pages/OpenForm";
+import FormList from './pages/FormList';
+import ViewEntry from './pages/ViewEntry';
 
 function App() {
   const { pathname } = useLocation();
@@ -57,6 +59,8 @@ function App() {
             <Analytics />
           </ProtectedRoute>
         } />
+
+        
         
         {/* Project and Form routes with new URL pattern */}
         <Route path="/:projectName" element={
@@ -85,12 +89,34 @@ function App() {
           } 
         />
 
-        {/* Open Form route */}
+        
+
+        {/* Form submissions route */}
         <Route 
-          path="/:projectName/forms/:formId/open" 
+          path="/project/:projectId/form/:formId/submissions" 
+          element={
+            <ProtectedRoute>
+              <FormList />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Route for adding new entries */}
+        <Route 
+          path="/project/:projectId/form/:formId/open-form" 
           element={
             <ProtectedRoute>
               <OpenForm />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* View entry route */}
+        <Route 
+          path="/project/:projectName/form/:formId/entry/:submissionId" 
+          element={
+            <ProtectedRoute>
+              <ViewEntry />
             </ProtectedRoute>
           } 
         />

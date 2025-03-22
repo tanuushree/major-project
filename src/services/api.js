@@ -163,6 +163,16 @@ export const formService = {
       throw error;
     }
   },
+
+  getFormSubmissions: async (formId) => {
+    const response = await api.get(`/submissions/${formId}`);
+    return response.data;
+  },
+
+  getSubmissionById: async (formId, submissionId) => {
+    const response = await api.get(`/submissions/${formId}/${submissionId}`);
+    return response.data;
+  },
 };
 
 
