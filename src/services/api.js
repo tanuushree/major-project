@@ -117,6 +117,16 @@ export const formService = {
       console.error('Get form error:', error);
       throw error;
     }
+  },
+
+  async getFieldsByForm(formId) {
+    try {
+      const response = await api.get(`/fields/${formId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching form fields:", error);
+      throw error;
+    }
   }
 };
 

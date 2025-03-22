@@ -20,8 +20,9 @@ function FormsPage() {
   };
 
   useEffect(() => {
-    if (!projectId) {
-      setError("Project ID not found. Please go back to projects page.");
+    const projectId = localStorage.getItem('currentProjectId');
+    if (!projectId || !projectName) {
+      setError("Project information not found. Please return to the projects page.");
       setLoading(false);
       return;
     }

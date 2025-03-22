@@ -2,11 +2,12 @@ import { Home, Profile, SignIn, SignUp } from "@/pages";
 import Project from "@/pages/project";
 import FormsPage from "@/pages/FormsPage";
 import FormDetailPage from "@/pages/FormDetailPage";
+import { Analytics } from "@/pages/analytics";
 
 export const routes = [
   {
     name: "projects",
-    path: "/",  // Root path shows all projects
+    path: "/projects",  // Root path shows all projects
     element: <Project />,
   },
   {
@@ -28,6 +29,11 @@ export const routes = [
     name: "Sign Up",
     path: "/sign-up",
     element: <SignUp />,
+  },
+  {
+    name: "analytics",
+    path: "/analytics",
+    element: <Analytics />,
   },
 ];
 

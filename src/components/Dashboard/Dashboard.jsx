@@ -60,7 +60,7 @@ export function Dashboard() {
     fetchProjectData();
   }, [projectId]);
 
-  const handleEditClick = () => {
+  const handleBackToProjectsClick = () => {
     navigate('/project');
   };
 
@@ -151,17 +151,14 @@ export function Dashboard() {
               <div className="mb-8 flex items-center justify-between gap-8">
                 <div className="flex items-center gap-4">
                   <Typography variant="h5" color="blue-gray">
-                    Resource Center
+                    Analytics Dashboard
                   </Typography>
-                  <span className="px-2 py-1 text-xs font-medium text-white bg-green-500 rounded">
-                    Live
-                  </span>
                 </div>
                 <Button 
                   variant="outlined" 
                   size="sm" 
                   className="flex items-center gap-2"
-                  onClick={handleEditClick}
+                  onClick={handleBackToProjectsClick}
                 >
                   <span>Edit</span>
                 </Button>
