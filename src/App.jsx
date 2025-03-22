@@ -12,21 +12,35 @@ import { Home } from "./pages/home";
 import { DashboardPage } from "./pages/dashboard";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { SavedFormsPage } from "./pages/SavedFormsPage";
+import { Analytics } from "./pages/analytics";
 
 function App() {
   const { pathname } = useLocation();
 
+  // Updated condition to also check for dashboard route pattern
+  const hideNavbar = pathname === "/" || 
+                    pathname === "/sign-in" || 
+                    pathname === "/sign-up" || 
+                    pathname === "/Landing" || 
+                    pathname.startsWith("/dashboard");  // Added analytics to hidden navbar paths
+
   return (
     <AuthProvider>
-      {!(pathname === "/sign-in" || pathname === "/sign-up" || pathname === "/Landing" || pathname === "/dashboard") && (
+      {!hideNavbar && (
         <div className="container absolute left-2/4 z-10 mx-auto -translate-x-2/4 p-4">
           <Navbar routes={routes} />
         </div>
       )}
 
       <Routes>
-        {/* Root route shows projects list */}
-        <Route path="/" element={
+        {/* Root route shows Landing page */}
+        <Route path="/" element={<Landing />} />
+
+        {/* Home route (unprotected) */}
+        <Route path="/home" element={<Home />} />
+
+        {/* Projects route (protected) */}
+        <Route path="/projects" element={
           <ProtectedRoute>
             <Project />
           </ProtectedRoute>
@@ -35,6 +49,13 @@ function App() {
         {/* Auth routes */}
         <Route path="/sign-in" element={<SignIn />} />
         <Route path="/sign-up" element={<SignUp />} />
+
+        {/* Analytics route */}
+        <Route path="/analytics/:projectId" element={
+          <ProtectedRoute>
+            <Analytics />
+          </ProtectedRoute>
+        } />
         
         {/* Project and Form routes with new URL pattern */}
         <Route path="/:projectName" element={

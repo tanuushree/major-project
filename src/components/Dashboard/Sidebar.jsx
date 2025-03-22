@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Squares2X2Icon,
   UsersIcon,
@@ -13,21 +13,23 @@ import {
 import { useAuth } from "../../context/AuthContext";
 
 const navItems = [
-  { icon: Squares2X2Icon, label: 'Dashboards', path: '/dashboard' },
-  { icon: UsersIcon, label: 'People', path: '/people' },
-  { icon: CubeIcon, label: 'Product', path: '/product', badge: 'Live' },
+  // { icon: Squares2X2Icon, label: 'Dashboards', path: '/dashboard' },
+  // { icon: UsersIcon, label: 'People', path: '/people' },
+  // { icon: CubeIcon, label: 'Product', path: '/product', badge: 'Live' },
   { icon: ChartBarIcon, label: 'Analytics', path: '/analytics' },
   { icon: ChatBubbleLeftRightIcon, label: 'Engagement', path: '/engagement' },
-  { icon: WrenchScrewdriverIcon, label: 'Feedback', path: '/feedback' },
+  // { icon: WrenchScrewdriverIcon, label: 'Feedback', path: '/feedback' },
 ];
 
 const bottomNavItems = [
-  { icon: QuestionMarkCircleIcon, label: 'Get Help', path: '/help' },
-  { icon: Cog6ToothIcon, label: 'Configure', path: '/configure' },
+  // { icon: QuestionMarkCircleIcon, label: 'Get Help', path: '/help' },
+  // { icon: Cog6ToothIcon, label: 'Configure', path: '/configure' },
 ];
 
 export function Sidebar() {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
+  const projectId = localStorage.getItem('currentProjectId');
   
   // Get the first letter of the user's name or email
   const getUserInitial = () => {
@@ -40,6 +42,21 @@ export function Sidebar() {
     }
     return '?';
   };
+
+  const navItems = [
+    {
+      icon: ChartBarIcon,
+      label: 'Analytics',
+      onClick: () => {
+        if (projectId) {
+          navigate(`/analytics/${projectId}`);
+        } else {
+          console.error('No project ID found');
+        }
+      }
+    },
+    // ... other nav items ...
+  ];
 
   return (
     <div className="fixed left-0 top-0 h-screen w-16 bg-[#1a1f2e] flex flex-col items-center text-white">
@@ -58,10 +75,10 @@ export function Sidebar() {
       <div className="flex-1 w-full">
         <nav className="flex flex-col items-center gap-4 py-4">
           {navItems.map((item, index) => (
-            <Link
+            <div
               key={index}
-              to={item.path}
-              className="w-full px-4 py-2 flex flex-col items-center text-center hover:bg-white/10"
+              onClick={item.onClick}
+              className="w-full px-4 py-2 flex flex-col items-center text-center hover:bg-white/10 cursor-pointer"
             >
               <item.icon className="w-6 h-6" />
               <span className="text-xs mt-1">{item.label}</span>
@@ -70,7 +87,7 @@ export function Sidebar() {
                   {item.badge}
                 </span>
               )}
-            </Link>
+            </div>
           ))}
         </nav>
       </div>
