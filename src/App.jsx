@@ -13,6 +13,7 @@ import { DashboardPage } from "./pages/dashboard";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { SavedFormsPage } from "./pages/SavedFormsPage";
 import { Analytics } from "./pages/analytics";
+import OpenForm from "./pages/OpenForm";
 
 function App() {
   const { pathname } = useLocation();
@@ -80,6 +81,16 @@ function App() {
           element={
             <ProtectedRoute>
               <SavedFormsPage />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Open Form route */}
+        <Route 
+          path="/:projectName/forms/:formId/open" 
+          element={
+            <ProtectedRoute>
+              <OpenForm />
             </ProtectedRoute>
           } 
         />

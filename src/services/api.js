@@ -99,9 +99,16 @@ export const formService = {
     }
   },
 
-  async saveForm(formId, formData) {
+  async saveForm(formId, fields) {
     try {
-      const response = await api.put(`/forms/${formId}`, formData);
+      const response = await api.put(`/forms/${formId}`, {
+        fields: fields.map(field => ({
+          label: field.label,
+          type: field.type.toLowerCase(),
+          required: field.required,
+          is_primary_key: field.is_primary_key
+        }))
+      });
       return response.data;
     } catch (error) {
       console.error('Save form error:', error);
@@ -124,10 +131,38 @@ export const formService = {
       const response = await api.get(`/fields/${formId}`);
       return response.data;
     } catch (error) {
-      console.error("Error fetching form fields:", error);
+      console.error('Get fields error:', error);
       throw error;
     }
-  }
+  },
+
+  async updateForm(formId, fields) {
+    try {
+      const response = await api.put(`/forms/${formId}/fields`, {
+        fields: fields.map((field, index) => ({
+          label: field.label,
+          type: field.type,
+          required: field.required,
+          is_primary_key: field.is_primary_key || false,
+          order: index + 1
+        }))
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Update form error:', error);
+      throw error;
+    }
+  },
+
+  async submitFormResponse(submissionData) {
+    try {
+      const response = await api.post('/submissions', submissionData);
+      return response.data;
+    } catch (error) {
+      console.error('Submit form error:', error);
+      throw error;
+    }
+  },
 };
 
 

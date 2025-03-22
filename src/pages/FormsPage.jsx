@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button, Card, Input, Dialog, Alert, Spinner } from "@material-tailwind/react";
 import { useParams, useNavigate } from "react-router-dom";
-import { formService } from "../services/api";
+import { formService } from "@/services/api";
 
 function FormsPage() {
   const { projectName } = useParams();
@@ -12,7 +12,7 @@ function FormsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
-  const projectId = localStorage.getItem('currentProjectId');
+  const [projectId, setProjectId] = useState(localStorage.getItem('currentProjectId'));
 
   // Helper function to format project name
   const formatProjectName = (name) => {
@@ -20,14 +20,13 @@ function FormsPage() {
   };
 
   useEffect(() => {
-    const projectId = localStorage.getItem('currentProjectId');
     if (!projectId || !projectName) {
       setError("Project information not found. Please return to the projects page.");
       setLoading(false);
       return;
     }
     fetchForms();
-  }, [projectId]);
+  }, [projectId, projectName]);
 
   const fetchForms = async () => {
     try {
@@ -38,37 +37,35 @@ function FormsPage() {
     } catch (err) {
       console.error("Error fetching forms:", err);
       setError(err.error || "Failed to load forms");
+      if (err.status === 401) {
+        navigate("/sign-in");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const createForm = async () => {
+  const handleCreateForm = async () => {
     if (!formName.trim()) {
       setError("Form name is required");
       return;
     }
 
+    if (!projectId) {
+      setError("Project ID not found");
+      return;
+    }
+
     try {
       setCreating(true);
-      setError("");
-      
-      const formData = {
+      const newForm = await formService.createForm({
         name: formName.trim(),
-        projectId: localStorage.getItem('currentProjectId'),
-        fields: []
-      };
-
-      const newForm = await formService.createForm(formData);
+        projectId: projectId
+      });
       setForms([...forms, newForm]);
       setFormName("");
       setOpenDialog(false);
-
-      // Navigate to the new form with its name
-      const encodedProjectName = encodeURIComponent(projectName);
-      navigate(`/${encodedProjectName}/${newForm.id}`, {
-        state: { formName: newForm.name }  // Pass form name in navigation state
-      });
+      setError("");
     } catch (err) {
       console.error("Error creating form:", err);
       setError(err.error || "Failed to create form");
@@ -119,7 +116,7 @@ function FormsPage() {
               onChange={(e) => setFormName(e.target.value)}
             />
             <Button 
-              onClick={createForm} 
+              onClick={handleCreateForm} 
               className="bg-black text-white"
               disabled={creating}
             >
