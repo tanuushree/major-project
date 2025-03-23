@@ -151,11 +151,16 @@ function FormsPage() {
                 <span className="w-1/4">{new Date(form.createdAt).toLocaleString()}</span>
                 <span className="w-1/4 text-center">
                   <button
-                    onClick={() => navigate(`/${formatProjectName(projectName)}/${form.id}`, {
-                      state: { formName: form.name,
-                               formId: form.id
-                       }  // Pass the form name in navigation state
-                    })}
+                    onClick={() => {
+                      console.log("Navigating with projectId:", projectId);
+                      navigate(`/${formatProjectName(projectName)}/${form.id}`, {
+                        state: {
+                          formName: form.name,
+                          formId: form.id,
+                          projectId: projectId
+                        }
+                      });
+                    }}
                     className="text-white underline hover:text-blue-300"
                   >
                     Open

@@ -27,8 +27,16 @@ function FormDetailPage() {
 
   const [loading, setLoading] = useState(true);
 
+  // Add new state for forms list
+  const [availableForms, setAvailableForms] = useState([]);
+  const [selectedReferenceForm, setSelectedReferenceForm] = useState("");
+
   // Data types for the dropdown
-  const dataTypes = ["Text", "Number", "Date", "Boolean", "Dropdown"];
+  const dataTypes = ["Text", "Number", "Date", "Boolean", "Form Reference"];
+
+  const projectId = location.state?.projectId;
+  console.log("Location state:", location.state);
+  console.log("Received projectId:", projectId);
 
   const fetchFormData = async () => {
     if (!formId || !projectName) {
@@ -111,7 +119,8 @@ function FormDetailPage() {
       label: fieldName,
       type: fieldType.toLowerCase(),
       required: isRequired,
-      is_primary_key: isPrimaryKey
+      is_primary_key: isPrimaryKey,
+      reference_form_id: fieldType === "Form Reference" ? selectedReferenceForm : null
     };
 
     setFields(updatedFields);
@@ -119,6 +128,7 @@ function FormDetailPage() {
     setFieldType("");
     setIsRequired(true);
     setIsPrimaryKey(false);
+    setSelectedReferenceForm("");
     setEditingField(null);
     setEditDialogOpen(false);
   };
@@ -132,6 +142,25 @@ function FormDetailPage() {
     navigate(`/project/${encodedProjectName}/form/${formId}/submissions`, {
       state: { formName: formName }
     });
+  };
+
+  const fetchAvailableForms = async () => {
+    if (!projectId) {
+      console.log("ProjectId missing in fetchAvailableForms");
+      setError("Project ID not found");
+      return;
+    }
+    
+    try {
+      console.log("Making API call with projectId:", projectId);
+      const forms = await formService.getFormsByProjectId(projectId);
+      console.log("Fetched forms:", forms);
+      const otherForms = forms.filter(form => form.id !== formId);
+      setAvailableForms(otherForms);
+    } catch (err) {
+      console.error("Error fetching forms:", err);
+      setError("Failed to load available forms");
+    }
   };
 
   useEffect(() => {
@@ -165,7 +194,7 @@ function FormDetailPage() {
           // If no fields found, just set empty array
           setFields([]);
         } else {
-          setError("Failed to load form fields");
+          setError("Add fields to the form first");
         }
       } finally {
         setLoading(false);
@@ -174,6 +203,21 @@ function FormDetailPage() {
 
     fetchFormFields();
   }, [formId]);
+
+  useEffect(() => {
+    if (fieldType === "Form Reference" && projectId) {
+      console.log("Fetching forms with projectId:", projectId);
+      fetchAvailableForms();
+    }
+  }, [fieldType, projectId]);
+
+  // When adding a new field or editing, ensure we fetch forms if needed
+  const handleFieldTypeChange = (val) => {
+    setFieldType(val);
+    if (val === "Form Reference" && projectId) {
+      fetchAvailableForms();
+    }
+  };
 
   if (loading) {
     return (
@@ -296,7 +340,7 @@ function FormDetailPage() {
             <Select 
               label="Select Data Type" 
               value={fieldType}
-              onChange={(val) => setFieldType(val)}
+              onChange={handleFieldTypeChange}
             >
               {dataTypes.map((type, i) => (
                 <Option key={i} value={type}>
@@ -333,6 +377,20 @@ function FormDetailPage() {
               </div>
             </div>
 
+            {fieldType === "Form Reference" && (
+              <Select 
+                label="Select Reference Form" 
+                value={selectedReferenceForm}
+                onChange={(val) => setSelectedReferenceForm(val)}
+              >
+                {availableForms.map((form) => (
+                  <Option key={form.id} value={form.id}>
+                    {form.name}
+                  </Option>
+                ))}
+              </Select>
+            )}
+
             <div className="flex justify-end gap-2">
               <Button
                 onClick={() => setEditDialogOpen(false)}
@@ -359,7 +417,10 @@ function FormDetailPage() {
               value={fieldName}
               onChange={(e) => setFieldName(e.target.value)}
             />
-            <Select label="Select Data Type" onChange={(val) => setFieldType(val)}>
+            <Select 
+              label="Select Data Type" 
+              onChange={handleFieldTypeChange}
+            >
               {dataTypes.map((type, i) => (
                 <Option key={i} value={type}>
                   {type}
@@ -397,6 +458,20 @@ function FormDetailPage() {
               </div>
             </div>
 
+            {fieldType === "Form Reference" && (
+              <Select 
+                label="Select Reference Form" 
+                value={selectedReferenceForm}
+                onChange={(val) => setSelectedReferenceForm(val)}
+              >
+                {availableForms.map((form) => (
+                  <Option key={form.id} value={form.id}>
+                    {form.name}
+                  </Option>
+                ))}
+              </Select>
+            )}
+
             <Button 
               onClick={() => {
                 if (fieldName && fieldType) {
@@ -408,13 +483,15 @@ function FormDetailPage() {
                       required: isRequired,
                       is_primary_key: isPrimaryKey,
                       order: fields.length + 1,
-                      form_id: formId
+                      form_id: formId,
+                      reference_form_id: fieldType === "Form Reference" ? selectedReferenceForm : null
                     }
                   ]);
                   setFieldName("");
                   setFieldType("");
                   setIsPrimaryKey(false);
                   setIsRequired(true);
+                  setSelectedReferenceForm("");
                   setOpenFieldDialog(false);
                 }
               }} 

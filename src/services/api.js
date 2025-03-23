@@ -190,4 +190,16 @@ export const projectService = {
   }
 };
 
+export const submissionService = {
+  getSubmissionByPrimaryKey: async (formId) => {
+    try {
+      const response = await api.get(`/submissions/${formId}/pkvalue`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching primary key submissions:', error);
+      throw error;
+    }
+  },
+};
+
 export default api;

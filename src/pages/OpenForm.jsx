@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { formService } from "@/services/api";
+import { submissionService } from '@/services/api';
 import {
   Card,
   Typography,
@@ -9,6 +10,8 @@ import {
   Spinner,
   Alert,
   Checkbox,
+  Select,
+  Option,
 } from "@material-tailwind/react";
 import { PencilIcon, CheckIcon, XMarkIcon } from "@heroicons/react/24/solid";
 
@@ -29,6 +32,7 @@ function OpenForm() {
   const [editingField, setEditingField] = useState(null);
   const [editValue, setEditValue] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [referenceFormValues, setReferenceFormValues] = useState({});
 
   useEffect(() => {
     const fetchFormFields = async () => {
@@ -55,6 +59,48 @@ function OpenForm() {
 
     fetchFormFields();
   }, [formId]);
+
+  useEffect(() => {
+    const loadReferenceValues = async () => {
+      try {
+        console.log("All fields:", fields);
+        // Change the filter condition to match exactly "Form Reference"
+        const referenceFields = fields.filter(field => 
+          field.type === "Form Reference" && field.reference_form_id
+        );
+        
+        console.log("Found reference fields:", referenceFields);
+        const referenceValues = {};
+        
+        for (const field of referenceFields) {
+          try {
+            console.log(`Fetching values for reference form ID: ${field.reference_form_id}`);
+            const values = await submissionService.getSubmissionByPrimaryKey(field.reference_form_id);
+            console.log(`API Response for ${field.label}:`, values);
+            
+            if (Array.isArray(values)) {
+              referenceValues[field.label] = values;
+            } else {
+              console.warn(`Unexpected API response format for ${field.label}:`, values);
+              referenceValues[field.label] = [];
+            }
+          } catch (err) {
+            console.error(`Error fetching values for ${field.label}:`, err);
+            referenceValues[field.label] = [];
+          }
+        }
+        
+        console.log("Setting reference values:", referenceValues);
+        setReferenceFormValues(referenceValues);
+      } catch (err) {
+        console.error("Error in loadReferenceValues:", err);
+      }
+    };
+
+    if (fields.length > 0) {
+      loadReferenceValues();
+    }
+  }, [fields]);
 
   const handleInputChange = (fieldLabel, value) => {
     setFormData((prev) => ({
@@ -115,6 +161,9 @@ function OpenForm() {
   };
 
   const renderField = (field) => {
+    console.log("Rendering field:", field);
+    console.log("Current referenceFormValues:", referenceFormValues);
+
     const isEditing = editingField === field.label;
 
     if (submitted && !isEditing) {
@@ -175,22 +224,58 @@ function OpenForm() {
       );
     }
 
-    return (
-      <Input
-        type={field.type.toLowerCase() === "number" ? "number" : "text"}
-        label={field.label}
-        value={formData[field.label] || ""}
-        onChange={(e) => handleInputChange(field.label, e.target.value)}
-        required={field.required}
-        className="text-white bg-gray-800 border-gray-600"
-        labelProps={{ className: "text-white" }}
-        style={{
-          backgroundColor: "#1F2937",
-          borderColor: "#4B5563",
-          color: "white",
-        }}
-      />
-    );
+    switch (field.type) {
+      case "Form Reference":
+        console.log(`Rendering Form Reference field: ${field.label}`);
+        console.log(`Reference form ID: ${field.reference_form_id}`);
+        console.log(`Available values:`, referenceFormValues[field.label]);
+        
+        return (
+          <div className="w-full">
+            <Select
+              key={field.label}
+              label={field.label}
+              value={formData[field.label] || ""}
+              onChange={(value) => {
+                console.log("Selected value:", value);
+                handleInputChange(field.label, value);
+              }}
+              required={field.required}
+              className="text-white bg-gray-800 border-gray-600"
+              labelProps={{ className: "text-white" }}
+            >
+              {Array.isArray(referenceFormValues[field.label]) && 
+                referenceFormValues[field.label].map((item) => (
+                  <Option 
+                    key={item.id || item.primary_key_value} 
+                    value={item.primary_key_value}
+                    className="text-gray-900"
+                  >
+                    {item.primary_key_value}
+                  </Option>
+                ))}
+            </Select>
+          </div>
+        );
+
+      default:
+        return (
+          <Input
+            type={field.type.toLowerCase() === "number" ? "number" : "text"}
+            label={field.label}
+            value={formData[field.label] || ""}
+            onChange={(e) => handleInputChange(field.label, e.target.value)}
+            required={field.required}
+            className="text-white bg-gray-800 border-gray-600"
+            labelProps={{ className: "text-white" }}
+            style={{
+              backgroundColor: "#1F2937",
+              borderColor: "#4B5563",
+              color: "white",
+            }}
+          />
+        );
+    }
   };
 
   if (loading) {
@@ -235,7 +320,7 @@ function OpenForm() {
         <Card className="bg-gray-800 p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             {fields.map((field, index) => (
-              <div key={index} className="space-y-2">
+              <div key={`${field.label}-${index}`} className="space-y-2">
                 {renderField(field)}
                 {field.is_primary_key && (
                   <Typography className="text-xs text-blue-500">

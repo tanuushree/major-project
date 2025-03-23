@@ -61,9 +61,9 @@ export function Dashboard() {
         // Get submissions for each form
         const allSubmissions = [];
         const allFormId = [];
-        console.log(formsData);
+        // console.log(formsData);
         for (const form of formsData) {
-          console.log(form.id);
+          // console.log(form.id);
           const formSubmissions = await formService.getFormSubmissions(form.id);
           allSubmissions.push(...formSubmissions);
         }
