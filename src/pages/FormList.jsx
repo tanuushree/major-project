@@ -63,9 +63,6 @@ function FormList() {
             <Typography variant="h4" className="text-white">
               {formName}
             </Typography>
-            <Typography className="text-gray-400">
-              Project: {projectName}
-            </Typography>
           </div>
           <div className="flex gap-4">
             <Button

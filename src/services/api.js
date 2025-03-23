@@ -69,15 +69,6 @@ export const authService = {
 };
 
 export const formService = {
-  async getForms(projectId) {
-    try {
-      const response = await api.get(`/forms/${projectId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Get forms error:', error);
-      throw error;
-    }
-  },
 
   async createForm(formData) {
     try {
@@ -169,8 +160,8 @@ export const formService = {
     return response.data;
   },
 
-  getSubmissionById: async (formId, submissionId) => {
-    const response = await api.get(`/submissions/${formId}/${submissionId}`);
+  getSubmissionById: async (submissionId) => {
+    const response = await api.get(`/submissions/get/${submissionId}`);
     return response.data;
   },
 };
