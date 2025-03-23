@@ -36,6 +36,7 @@ function OpenForm() {
   const [referenceFormValues, setReferenceFormValues] = useState({});
   const [referenceFieldValues, setReferenceFieldValues] = useState({});
   const [fieldOptions, setFieldOptions] = useState({});
+  const [referenceFieldOptions, setReferenceFieldOptions] = useState({});
 
   useEffect(() => {
     const fetchFormFields = async () => {
@@ -78,7 +79,7 @@ function OpenForm() {
         for (const field of referenceFields) {
           try {
             console.log(`Fetching values for reference form Name: ${field.form_name}`);
-            const values = await submissionService.getFieldSubmissions(field.form_name);
+            const values = await submissionService.getFieldSubmissions();
             console.log(`API Response for ${field.label}:`, values);
             console.log(field.form_name);
             
@@ -221,7 +222,65 @@ function OpenForm() {
     }
   }, [fields]);
 
+  useEffect(() => {
+    const fetchReferenceFieldOptions = async () => {
+      if (!fields) return;
+
+      const referenceFields = fields.filter(field => 
+        field.type.toLowerCase() === 'form reference' && field.form_name
+      );
+      
+      const optionsMap = {};
+      for (const field of referenceFields) {
+        try {
+          console.log(`Fetching options for form: ${field.form_name}, field: ${field.label}`);
+          const submissions = await submissionService.getFieldSubmissions({
+            formName: field.form_name,
+            fieldName: field.label
+          });
+          console.log('Received reference field submissions:', submissions);
+          
+          optionsMap[field.label] = submissions || [];
+        } catch (error) {
+          console.error(`Error fetching options for ${field.label}:`, error);
+          optionsMap[field.label] = [];
+        }
+      }
+
+      console.log('Final options map:', optionsMap);
+      setReferenceFieldOptions(optionsMap);
+    };
+
+    fetchReferenceFieldOptions();
+  }, [fields]);
+
   const renderField = (field) => {
+    if (field.type.toLowerCase() === 'form reference' && field.form_name) {
+      const options = referenceFieldOptions[field.label] || [];
+      console.log(`Rendering options for ${field.label}:`, options);
+      
+      return (
+        <div key={field.label} className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">
+            {field.label} {field.required && <span className="text-red-500">*</span>}
+          </label>
+          <select
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            value={formData[field.label] || ''}
+            onChange={(e) => handleInputChange(field.label, e.target.value)}
+            required={field.required}
+          >
+            <option value="">Select {field.label}</option>
+            {Array.isArray(options) && options.map((option, index) => (
+              <option key={index} value={option.value}>
+                {option.value}
+              </option>
+            ))}
+          </select>
+        </div>
+      );
+    }
+
     // If submitted and not editing, show the value as text
     if (submitted && !editingField) {
       return (
@@ -234,35 +293,6 @@ function OpenForm() {
 
     // For editing or new entry
     switch (field.type.toLowerCase()) {
-      case "form reference":
-        return (
-          <div className="w-full">
-            <Select
-              key={`${field.label}-select`}
-              label={field.label}
-              value={formData[field.label] || ""}
-              onChange={(value) => handleInputChange(field.label, value)}
-              required={field.required}
-              className="text-white bg-gray-800 border-gray-600"
-              labelProps={{ className: "text-white" }}
-              disabled={submitted && !editingField}
-            >
-              {(fieldOptions[field.label] || []).map((option) => (
-                <Option 
-                  key={option.submissionId} 
-                  value={option.value}
-                  className="text-gray-900"
-                >
-                  {option.value}
-                </Option>
-              ))}
-            </Select>
-            <div className="mt-1 text-xs text-gray-400">
-              References form: {field.form_name}
-            </div>
-          </div>
-        );
-
       case "boolean":
         return (
           <Checkbox

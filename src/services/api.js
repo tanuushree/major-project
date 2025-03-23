@@ -156,8 +156,10 @@ export const formService = {
     }
   },
 
-  getFormSubmissions: async (formId, format = 'json') => {
-    const response = await api.get(`/submissions/${formId}?format=${format}`);
+  getFormSubmissions: async (formId, format ) => {
+    const response = await api.get(`/submissions/${formId}`, {
+      format: format
+    });
     return response.data;
   },
 
@@ -207,10 +209,11 @@ export const submissionService = {
     return response.data;
   },
 
-  getFieldSubmissions: async (formName, fieldName) => {
+  getFieldSubmissions: async (params) => {
     try {
-      const response = await api.post(`/submissions/${formName}/field`, {
-        fieldName
+      const response = await api.post(`/submissions/field`, {
+        formName: params.formName,
+        fieldName: params.fieldName
       });
       return response.data;
     } catch (error) {
