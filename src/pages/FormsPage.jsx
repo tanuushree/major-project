@@ -31,7 +31,8 @@ function FormsPage() {
   const fetchForms = async () => {
     try {
       setLoading(true);
-      const response = await formService.getForms(projectId);
+      console.log(projectId);
+      const response = await formService.getFormsByProjectId(projectId);
       setForms(response || []);
       setError("");
     } catch (err) {

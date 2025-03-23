@@ -10,7 +10,7 @@ function ViewEntry() {
   const navigate = useNavigate();
   const formName = location.state?.formName || "Form";
 
-  const [submissionData, setSubmissionData] = useState({});
+  const [submissionData, setSubmissionData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -18,9 +18,9 @@ function ViewEntry() {
     const fetchSubmissionData = async () => {
       try {
         setLoading(true);
-        const response = await formService.getSubmissionById(formId, submissionId);
+        const response = await formService.getSubmissionById(submissionId);
         console.log('Submission data:', response);
-        setSubmissionData(response.data || {});
+        setSubmissionData(response);
       } catch (err) {
         console.error('Error fetching submission:', err);
         setError('Failed to load submission details');
@@ -29,10 +29,10 @@ function ViewEntry() {
       }
     };
 
-    if (formId && submissionId) {
+    if (submissionId) {
       fetchSubmissionData();
     }
-  }, [formId, submissionId]);
+  }, [submissionId]);
 
   if (loading) {
     return (
@@ -50,9 +50,6 @@ function ViewEntry() {
             <Typography variant="h4" className="text-white">
               {formName} - Entry Details
             </Typography>
-            <Typography className="text-gray-400">
-              Project: {projectName}
-            </Typography>
           </div>
           <Button
             onClick={() => navigate(`/project/${encodedProjectName}/form/${formId}/submissions`)}
@@ -69,20 +66,20 @@ function ViewEntry() {
         )}
 
         <Card className="bg-gray-800 p-6">
-          <div className="space-y-4">
-            {Object.entries(submissionData).map(([fieldName, value]) => (
-              <div key={fieldName} className="space-y-1">
-                <Typography variant="small" className="text-gray-400">
-                  {fieldName}
-                </Typography>
-                <div className="bg-gray-700 p-3 rounded-md">
+          {submissionData && (
+            <div className="space-y-4">
+              {Object.entries(submissionData).map(([fieldName, value], index) => (
+                <div key={index} className="bg-gray-700 p-4 rounded-lg">
+                  <Typography className="text-gray-400 text-sm">
+                    {fieldName}
+                  </Typography>
                   <Typography className="text-white">
-                    {value?.toString() || "N/A"}
+                    {value || 'N/A'}
                   </Typography>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     </div>
