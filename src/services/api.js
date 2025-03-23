@@ -97,7 +97,8 @@ export const formService = {
           label: field.label,
           type: field.type.toLowerCase(),
           required: field.required,
-          is_primary_key: field.is_primary_key
+          is_primary_key: field.is_primary_key,
+          form_name: field.type.toLowerCase() === "form reference" ? field.form_name : null
         }))
       });
       return response.data;
@@ -155,8 +156,8 @@ export const formService = {
     }
   },
 
-  getFormSubmissions: async (formId) => {
-    const response = await api.get(`/submissions/${formId}`);
+  getFormSubmissions: async (formId, format = 'json') => {
+    const response = await api.get(`/submissions/${formId}?format=${format}`);
     return response.data;
   },
 
@@ -189,5 +190,36 @@ export const projectService = {
     }
   }
 };
+
+export const submissionService = {
+  getSubmissionByPrimaryKey: async (formName) => {
+    try {
+      const response = await api.get(`/submissions/${formName}/pkvalue`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching primary key values:', error);
+      throw error;
+    }
+  },
+
+  getFormSubmissions: async (formId, format = 'json') => {
+    const response = await api.get(`/submissions/${formId}?format=${format}`);
+    return response.data;
+  },
+
+  getFieldSubmissions: async (formName, fieldName) => {
+    try {
+      const response = await api.post(`/submissions/${formName}/field`, {
+        fieldName
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching field submissions:', error);
+      throw error;
+    }
+  },
+};
+
+
 
 export default api;

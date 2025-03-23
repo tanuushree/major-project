@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { Typography, Button, Card, Spinner, Alert } from "@material-tailwind/react";
-import { formService } from "../services/api";
+import { Typography, Button, Card, Spinner, Alert, Menu, MenuHandler, MenuList, MenuItem } from "@material-tailwind/react";
+import { formService, submissionService } from "../services/api";
+import { CloudArrowDownIcon } from "@heroicons/react/24/outline";
+import { toast } from "react-hot-toast";
 
 function FormList() {
   const { projectName: encodedProjectName, formId } = useParams();
@@ -47,6 +49,50 @@ function FormList() {
     });
   };
 
+  const handleDownload = async (formId, format) => {
+    try {
+      console.log('Downloading submissions for form:', formId, 'format:', format); // Debug log
+      const response = await submissionService.getFormSubmissions(formId, format);
+      console.log('Response:', response); // Debug log
+      
+      // Convert the response data based on format
+      let blob;
+      let filename;
+      
+      if (format === 'csv') {
+        // Convert data to CSV string
+        const headers = Object.keys(response[0]?.data || {}).join(',');
+        const rows = response.map(submission => 
+          Object.values(submission.data).join(',')
+        ).join('\n');
+        const csvContent = `${headers}\n${rows}`;
+        
+        blob = new Blob([csvContent], { type: 'text/csv' });
+        filename = `form_${formId}_submissions.csv`;
+      } else {
+        // For PDF, just use JSON for now
+        const jsonContent = JSON.stringify(response, null, 2);
+        blob = new Blob([jsonContent], { type: 'application/json' });
+        filename = `form_${formId}_submissions.json`;
+      }
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Download successful!');
+    } catch (error) {
+      console.error('Error downloading submissions:', error);
+      toast.error('Failed to download submissions');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-black">
@@ -71,6 +117,32 @@ function FormList() {
             >
               Add Entry
             </Button>
+            <Menu placement="bottom-end">
+              <MenuHandler>
+                <Button 
+                  variant="outlined"
+                  className="flex items-center gap-2 border-white"
+                >
+                  <CloudArrowDownIcon className="h-4 w-4 text-white" />
+                  <span className="text-white">Download</span>
+                  
+                </Button>
+              </MenuHandler>
+              <MenuList>
+                <MenuItem
+                  onClick={() => handleDownload(formId, 'csv')}
+                  className="flex items-center gap-2"
+                >
+                  <span>Download as CSV</span>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => handleDownload(formId, 'pdf')}
+                  className="flex items-center gap-2"
+                >
+                  <span>Download as PDF</span>
+                </MenuItem>
+              </MenuList>
+            </Menu>
             <Button
               onClick={() => navigate(`/project/${encodedProjectName}/form/${formId}`)}
               className="bg-white text-black"
@@ -113,12 +185,14 @@ function FormList() {
                         {new Date(submission.createdAt).toLocaleString()}
                       </Typography>
                     </div>
-                    <Button
-                      className="bg-blue-500 hover:bg-blue-600"
-                      onClick={() => handleViewEntry(submission.id)}
-                    >
-                      View Details
-                    </Button>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        className="bg-blue-500 hover:bg-blue-600"
+                        onClick={() => handleViewEntry(submission.id)}
+                      >
+                        View Details
+                      </Button>
+                    </div>
                   </div>
                 );
               })}
