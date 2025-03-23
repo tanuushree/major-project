@@ -33,6 +33,7 @@ function OpenForm() {
   const [editValue, setEditValue] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [referenceFormValues, setReferenceFormValues] = useState({});
+  const [referenceFieldValues, setReferenceFieldValues] = useState({});
 
   useEffect(() => {
     const fetchFormFields = async () => {
@@ -63,14 +64,14 @@ function OpenForm() {
   useEffect(() => {
     const loadReferenceValues = async () => {
       try {
-        console.log("All fields:", fields);
+        // console.log("All fields:", fields);
         // Change the filter condition to match exactly "Form Reference"
         const referenceFields = fields.filter(field => 
-          field.type === "Form Reference" && field.reference_form_id
+          field.type.toLowerCase() === "form reference"     
         );
         
         console.log("Found reference fields:", referenceFields);
-        const referenceValues = {};
+        // const referenceValues = {};
         
         for (const field of referenceFields) {
           try {
@@ -102,10 +103,35 @@ function OpenForm() {
     }
   }, [fields]);
 
-  const handleInputChange = (fieldLabel, value) => {
-    setFormData((prev) => ({
+  const fetchReferenceFieldValue = async (formId, primaryKeyValue) => {
+    try {
+      const response = await submissionService.getSubmissionByPrimaryKey(formId, primaryKeyValue);
+      console.log('Reference field response:', response);
+      return response;
+    } catch (error) {
+      console.error('Error fetching reference field:', error);
+      return null;
+    }
+  };
+
+  const handleInputChange = async (fieldName, value) => {
+    const field = fields.find(f => f.label === fieldName);
+    
+    if (field?.type === "Form Reference" && value) {
+      try {
+        const referenceData = await fetchReferenceFieldValue(field.reference_form_id, value);
+        setReferenceFieldValues(prev => ({
+          ...prev,
+          [fieldName]: referenceData
+        }));
+      } catch (error) {
+        console.error('Error fetching reference data:', error);
+      }
+    }
+
+    setFormData(prev => ({
       ...prev,
-      [fieldLabel]: value,
+      [fieldName]: value
     }));
   };
 
@@ -244,17 +270,21 @@ function OpenForm() {
               className="text-white bg-gray-800 border-gray-600"
               labelProps={{ className: "text-white" }}
             >
-              {Array.isArray(referenceFormValues[field.label]) && 
-                referenceFormValues[field.label].map((item) => (
-                  <Option 
-                    key={item.id || item.primary_key_value} 
-                    value={item.primary_key_value}
-                    className="text-gray-900"
-                  >
-                    {item.primary_key_value}
-                  </Option>
-                ))}
+              {(referenceFormValues[field.label] || []).map((item) => (
+                <Option 
+                  key={item.id || item.primary_key_value} 
+                  value={item.primary_key_value}
+                  className="text-gray-900"
+                >
+                  {item.primary_key_value}
+                </Option>
+              ))}
             </Select>
+            {referenceFieldValues[field.label] && (
+              <div className="mt-2 text-sm text-gray-500">
+                Reference Details: {JSON.stringify(referenceFieldValues[field.label])}
+              </div>
+            )}
           </div>
         );
 

@@ -155,8 +155,8 @@ export const formService = {
     }
   },
 
-  getFormSubmissions: async (formId) => {
-    const response = await api.get(`/submissions/${formId}`);
+  getFormSubmissions: async (formId, format = 'json') => {
+    const response = await api.get(`/submissions/${formId}?format=${format}`);
     return response.data;
   },
 
@@ -191,15 +191,19 @@ export const projectService = {
 };
 
 export const submissionService = {
-  getSubmissionByPrimaryKey: async (formId) => {
-    try {
-      const response = await api.get(`/submissions/${formId}/pkvalue`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching primary key submissions:', error);
-      throw error;
-    }
+  getSubmissionByPrimaryKey: async (formId, primaryKeyValue) => {
+    const response = await api.post(`/submissions/${formId}/pkvalue`, {
+      primaryKeyValue
+    });
+    return response.data;
+  },
+
+  getFormSubmissions: async (formId, format = 'json') => {
+    const response = await api.get(`/submissions/${formId}?format=${format}`);
+    return response.data;
   },
 };
+
+
 
 export default api;
