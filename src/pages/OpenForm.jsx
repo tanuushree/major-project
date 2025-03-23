@@ -14,6 +14,7 @@ import {
   Option,
 } from "@material-tailwind/react";
 import { PencilIcon, CheckIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { toast } from "react-hot-toast";
 
 function OpenForm() {
   const { projectName: encodedProjectName, formId } = useParams();
@@ -34,6 +35,7 @@ function OpenForm() {
   const [submitted, setSubmitted] = useState(false);
   const [referenceFormValues, setReferenceFormValues] = useState({});
   const [referenceFieldValues, setReferenceFieldValues] = useState({});
+  const [fieldOptions, setFieldOptions] = useState({});
 
   useEffect(() => {
     const fetchFormFields = async () => {
@@ -67,17 +69,18 @@ function OpenForm() {
         // console.log("All fields:", fields);
         // Change the filter condition to match exactly "Form Reference"
         const referenceFields = fields.filter(field => 
-          field.type.toLowerCase() === "form reference"     
+          field.type.toLowerCase() === "form reference" && field.form_name !== null
         );
         
         console.log("Found reference fields:", referenceFields);
-        // const referenceValues = {};
+        const referenceValues = {};
         
         for (const field of referenceFields) {
           try {
-            console.log(`Fetching values for reference form ID: ${field.reference_form_id}`);
-            const values = await submissionService.getSubmissionByPrimaryKey(field.reference_form_id);
+            console.log(`Fetching values for reference form Name: ${field.form_name}`);
+            const values = await submissionService.getFieldSubmissions(field.form_name);
             console.log(`API Response for ${field.label}:`, values);
+            console.log(field.form_name);
             
             if (Array.isArray(values)) {
               referenceValues[field.label] = values;
@@ -186,123 +189,126 @@ function OpenForm() {
     setEditValue("");
   };
 
+  const fetchFieldValues = async (formName, fieldLabel) => {
+    try {
+      console.log(`Fetching values for ${formName}, field: ${fieldLabel}`);
+      const response = await submissionService.getFieldSubmissions(formName, fieldLabel);
+      console.log('Field values response:', response);
+      
+      setFieldOptions(prev => ({
+        ...prev,
+        [fieldLabel]: response
+      }));
+    } catch (error) {
+      console.error(`Error fetching field values for ${formName}:`, error);
+      toast.error(`Failed to load options for ${fieldLabel}`);
+    }
+  };
+
+  useEffect(() => {
+    const loadReferenceFields = async () => {
+      const referenceFields = fields.filter(field => field.type === "Form Reference");
+      
+      for (const field of referenceFields) {
+        if (field.form_name) {
+          await fetchFieldValues(field.form_name, field.label);
+        }
+      }
+    };
+
+    if (fields.length > 0) {
+      loadReferenceFields();
+    }
+  }, [fields]);
+
   const renderField = (field) => {
-    console.log("Rendering field:", field);
-    console.log("Current referenceFormValues:", referenceFormValues);
-
-    const isEditing = editingField === field.label;
-
-    if (submitted && !isEditing) {
+    // If submitted and not editing, show the value as text
+    if (submitted && !editingField) {
       return (
-        <div className="flex items-center gap-2">
-          <Input
-            type={field.type.toLowerCase() === "number" ? "number" : "text"}
-            label={field.label}
-            value={formData[field.label] || ""}
-            className="text-white bg-gray-800 border-gray-600"
-            labelProps={{ className: "text-white" }}
-            style={{
-              backgroundColor: "#1F2937",
-              borderColor: "#4B5563",
-              color: "white",
-            }}
-            disabled
-          />
-          <Button
-            className="p-2 bg-blue-500 hover:bg-blue-600"
-            onClick={() => handleEdit(field.label)}
-          >
-            <PencilIcon className="h-4 w-4" />
-          </Button>
+        <div className="text-white">
+          <span className="font-medium">{field.label}: </span>
+          {formData[field.label]}
         </div>
       );
     }
 
-    if (isEditing) {
-      return (
-        <div className="flex items-center gap-2">
-          <Input
-            type={field.type.toLowerCase() === "number" ? "number" : "text"}
-            label={field.label}
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            className="text-white bg-gray-800 border-gray-600"
-            labelProps={{ className: "text-white" }}
-            style={{
-              backgroundColor: "#1F2937",
-              borderColor: "#4B5563",
-              color: "white",
-            }}
-          />
-          <Button
-            className="p-2 bg-green-500 hover:bg-green-600"
-            onClick={() => handleSaveEdit(field.label)}
-          >
-            <CheckIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            className="p-2 bg-red-500 hover:bg-red-600"
-            onClick={handleCancelEdit}
-          >
-            <XMarkIcon className="h-4 w-4" />
-          </Button>
-        </div>
-      );
-    }
-
-    switch (field.type) {
-      case "Form Reference":
-        console.log(`Rendering Form Reference field: ${field.label}`);
-        console.log(`Reference form ID: ${field.reference_form_id}`);
-        console.log(`Available values:`, referenceFormValues[field.label]);
-        
+    // For editing or new entry
+    switch (field.type.toLowerCase()) {
+      case "form reference":
         return (
           <div className="w-full">
             <Select
-              key={field.label}
+              key={`${field.label}-select`}
               label={field.label}
               value={formData[field.label] || ""}
-              onChange={(value) => {
-                console.log("Selected value:", value);
-                handleInputChange(field.label, value);
-              }}
+              onChange={(value) => handleInputChange(field.label, value)}
               required={field.required}
               className="text-white bg-gray-800 border-gray-600"
               labelProps={{ className: "text-white" }}
+              disabled={submitted && !editingField}
             >
-              {(referenceFormValues[field.label] || []).map((item) => (
+              {(fieldOptions[field.label] || []).map((option) => (
                 <Option 
-                  key={item.id || item.primary_key_value} 
-                  value={item.primary_key_value}
+                  key={option.submissionId} 
+                  value={option.value}
                   className="text-gray-900"
                 >
-                  {item.primary_key_value}
+                  {option.value}
                 </Option>
               ))}
             </Select>
-            {referenceFieldValues[field.label] && (
-              <div className="mt-2 text-sm text-gray-500">
-                Reference Details: {JSON.stringify(referenceFieldValues[field.label])}
-              </div>
-            )}
+            <div className="mt-1 text-xs text-gray-400">
+              References form: {field.form_name}
+            </div>
           </div>
         );
 
-      default:
+      case "boolean":
+        return (
+          <Checkbox
+            label={field.label}
+            checked={formData[field.label] || false}
+            onChange={(e) => handleInputChange(field.label, e.target.checked)}
+            disabled={submitted && !editingField}
+          />
+        );
+
+      case "date":
         return (
           <Input
-            type={field.type.toLowerCase() === "number" ? "number" : "text"}
+            type="date"
             label={field.label}
             value={formData[field.label] || ""}
             onChange={(e) => handleInputChange(field.label, e.target.value)}
             required={field.required}
             className="text-white bg-gray-800 border-gray-600"
-            labelProps={{ className: "text-white" }}
-            style={{
-              backgroundColor: "#1F2937",
-              borderColor: "#4B5563",
-              color: "white",
-            }}
+            disabled={submitted && !editingField}
+          />
+        );
+
+      case "number":
+        return (
+          <Input
+            type="number"
+            label={field.label}
+            value={formData[field.label] || ""}
+            onChange={(e) => handleInputChange(field.label, e.target.value)}
+            required={field.required}
+            className="text-white bg-gray-800 border-gray-600"
+            disabled={submitted && !editingField}
+          />
+        );
+
+      default: // text
+        return (
+          <Input
+            type="text"
+            label={field.label}
+            value={formData[field.label] || ""}
+            onChange={(e) => handleInputChange(field.label, e.target.value)}
+            required={field.required}
+            className="text-white bg-gray-800 border-gray-600"
+            disabled={submitted && !editingField}
           />
         );
     }
@@ -349,14 +355,9 @@ function OpenForm() {
         {/* Form */}
         <Card className="bg-gray-800 p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {fields.map((field, index) => (
-              <div key={`${field.label}-${index}`} className="space-y-2">
+            {fields.map((field) => (
+              <div key={field.label} className="space-y-2">
                 {renderField(field)}
-                {field.is_primary_key && (
-                  <Typography className="text-xs text-blue-500">
-                    Primary Key Field
-                  </Typography>
-                )}
               </div>
             ))}
 

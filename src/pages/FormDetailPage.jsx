@@ -35,8 +35,7 @@ function FormDetailPage() {
   const dataTypes = ["Text", "Number", "Date", "Boolean", "Form Reference"];
 
   const projectId = location.state?.projectId;
-  console.log("Location state:", location.state);
-  console.log("Received projectId:", projectId);
+  console.log(projectId);
 
   const fetchFormData = async () => {
     if (!formId || !projectName) {
@@ -77,25 +76,39 @@ function FormDetailPage() {
     setError(null);
 
     try {
-      const fieldsData = fields.map(field => ({
-        label: field.label,
-        type: field.type.toLowerCase(),
-        required: field.required,
-        is_primary_key: field.is_primary_key
-      }));
+      const fieldsData = fields.map(field => {
+        const fieldData = {
+          label: field.label,
+          type: field.type.toLowerCase(),
+          required: field.required,
+          is_primary_key: field.is_primary_key,
+          form_name: field.type.toLowerCase() === "form reference" ? field.form_name : null
+        };
+        console.log("Processing field:", fieldData);
+        return fieldData;
+      });
 
+      console.log("Full fields data being sent:", fieldsData);
       const response = await formService.saveForm(formId, fieldsData);
-      console.log("Form saved successfully:", response);
-      setSuccessMessage("Form saved successfully!");
-      
+      console.log(response);
+
       if (response.fields) {
-        setFields(response.fields);
+        console.log("Setting fields from response:", response.fields);
+        setFields(response.fields.map(field => ({
+          ...field,
+          // Ensure form_name is preserved from the response
+          form_name: field.type.toLowerCase() === "form reference" ? field.form_name : null
+        })));
+      } else {
+        console.log("No fields in response, keeping existing fields");
+        setFields(fields);
       }
       
+      setSuccessMessage("Form saved successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
+      console.error("Detailed save error:", err);
       setError("Failed to save form");
-      console.error("Save error:", err);
     } finally {
       setSaving(false);
     }
@@ -113,16 +126,20 @@ function FormDetailPage() {
   const handleUpdateField = () => {
     if (!fieldName || !fieldType) return;
 
+    console.log("Updating field with form name:", selectedReferenceForm);
+    console.log("Field type:", fieldType);
+
     const updatedFields = [...fields];
     updatedFields[editingField.index] = {
       ...editingField,
       label: fieldName,
-      type: fieldType.toLowerCase(),
+      type: fieldType,
       required: isRequired,
       is_primary_key: isPrimaryKey,
-      reference_form_id: fieldType === "Form Reference" ? selectedReferenceForm : null
+      form_name: fieldType === "Form Reference" ? selectedReferenceForm : null
     };
 
+    console.log("Updated field data:", updatedFields[editingField.index]);
     setFields(updatedFields);
     setFieldName("");
     setFieldType("");
@@ -146,15 +163,13 @@ function FormDetailPage() {
 
   const fetchAvailableForms = async () => {
     if (!projectId) {
-      console.log("ProjectId missing in fetchAvailableForms");
       setError("Project ID not found");
       return;
     }
     
     try {
-      console.log("Making API call with projectId:", projectId);
       const forms = await formService.getFormsByProjectId(projectId);
-      console.log("Fetched forms:", forms);
+      // Filter out the current form from the list
       const otherForms = forms.filter(form => form.id !== formId);
       setAvailableForms(otherForms);
     } catch (err) {
@@ -205,17 +220,34 @@ function FormDetailPage() {
   }, [formId]);
 
   useEffect(() => {
-    if (fieldType === "Form Reference" && projectId) {
-      console.log("Fetching forms with projectId:", projectId);
+    if (fieldType === "Form Reference") {
       fetchAvailableForms();
     }
-  }, [fieldType, projectId]);
+  }, [fieldType]);
 
-  // When adding a new field or editing, ensure we fetch forms if needed
-  const handleFieldTypeChange = (val) => {
-    setFieldType(val);
-    if (val === "Form Reference" && projectId) {
-      fetchAvailableForms();
+  const handleAddField = () => {
+    if (fieldName && fieldType) {
+      console.log("Adding new field with form name:", selectedReferenceForm);
+      console.log("Field type:", fieldType);
+
+      const newField = {
+        label: fieldName,
+        type: fieldType,
+        required: isRequired,
+        is_primary_key: isPrimaryKey,
+        order: fields.length + 1,
+        form_id: formId,
+        form_name: fieldType === "Form Reference" ? selectedReferenceForm : null
+      };
+
+      console.log("New field data:", newField);
+      setFields([...fields, newField]);
+      setFieldName("");
+      setFieldType("");
+      setIsPrimaryKey(false);
+      setIsRequired(true);
+      setSelectedReferenceForm("");
+      setOpenFieldDialog(false);
     }
   };
 
@@ -340,7 +372,7 @@ function FormDetailPage() {
             <Select 
               label="Select Data Type" 
               value={fieldType}
-              onChange={handleFieldTypeChange}
+              onChange={(val) => setFieldType(val)}
             >
               {dataTypes.map((type, i) => (
                 <Option key={i} value={type}>
@@ -381,10 +413,13 @@ function FormDetailPage() {
               <Select 
                 label="Select Reference Form" 
                 value={selectedReferenceForm}
-                onChange={(val) => setSelectedReferenceForm(val)}
+                onChange={(val) => {
+                  console.log("Selected form name:", val);
+                  setSelectedReferenceForm(val);
+                }}
               >
                 {availableForms.map((form) => (
-                  <Option key={form.id} value={form.id}>
+                  <Option key={form.id} value={form.name}>
                     {form.name}
                   </Option>
                 ))}
@@ -417,10 +452,7 @@ function FormDetailPage() {
               value={fieldName}
               onChange={(e) => setFieldName(e.target.value)}
             />
-            <Select 
-              label="Select Data Type" 
-              onChange={handleFieldTypeChange}
-            >
+            <Select label="Select Data Type" onChange={(val) => setFieldType(val)}>
               {dataTypes.map((type, i) => (
                 <Option key={i} value={type}>
                   {type}
@@ -462,10 +494,13 @@ function FormDetailPage() {
               <Select 
                 label="Select Reference Form" 
                 value={selectedReferenceForm}
-                onChange={(val) => setSelectedReferenceForm(val)}
+                onChange={(val) => {
+                  console.log("Selected form name:", val);
+                  setSelectedReferenceForm(val);
+                }}
               >
                 {availableForms.map((form) => (
-                  <Option key={form.id} value={form.id}>
+                  <Option key={form.id} value={form.name}>
                     {form.name}
                   </Option>
                 ))}
@@ -473,28 +508,7 @@ function FormDetailPage() {
             )}
 
             <Button 
-              onClick={() => {
-                if (fieldName && fieldType) {
-                  setFields([
-                    ...fields,
-                    {
-                      label: fieldName,
-                      type: fieldType.toLowerCase(),
-                      required: isRequired,
-                      is_primary_key: isPrimaryKey,
-                      order: fields.length + 1,
-                      form_id: formId,
-                      reference_form_id: fieldType === "Form Reference" ? selectedReferenceForm : null
-                    }
-                  ]);
-                  setFieldName("");
-                  setFieldType("");
-                  setIsPrimaryKey(false);
-                  setIsRequired(true);
-                  setSelectedReferenceForm("");
-                  setOpenFieldDialog(false);
-                }
-              }} 
+              onClick={handleAddField} 
               className="bg-black text-white"
             >
               Add Field
