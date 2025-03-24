@@ -13,8 +13,7 @@ import {
   Alert,
   Spinner,
 } from "@material-tailwind/react";
-import { PlusIcon, ChartBarIcon } from "@heroicons/react/24/solid";
-
+import { PlusIcon, ChartBarIcon, ArrowRightIcon } from "@heroicons/react/24/solid";
 import { useAuth } from "../context/AuthContext";
 
 function Project() {
@@ -93,7 +92,6 @@ function Project() {
     }
     const encodedProjectName = encodeURIComponent(project.name);
     localStorage.setItem('currentProjectId', project.id);
-    console.log('Opening project:', project.name, 'with ID:', project.id);
     navigate(`/${encodedProjectName}`);
   };
 
@@ -104,7 +102,6 @@ function Project() {
   const handleDeleteProject = async (projectId) => {
     try {
       setDeleteLoading(projectId);
-      // Mock API call for now
       const newProjects = projects.filter((project) => project.id !== projectId);
       setProjects(newProjects);
       setError("");
@@ -118,33 +115,39 @@ function Project() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-black">
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-900 to-black">
         <Spinner className="h-12 w-12" color="white" />
       </div>
     );
   }
 
   return (
-    <div className="relative bg-black text-white min-h-screen">
-      <div className="pt-28 px-6 lg:px-28 space-y-6">
+    <div className="min-h-screen relative bg-gradient-to-br from-gray-900 to-black">
+      {/* Background image with blur */}
+      <div 
+        className="absolute inset-0 bg-[url('/img/sigin.jpeg')] opacity-10 bg-cover bg-center"
+      />
+      
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-black/50" />
+
+      {/* Content */}
+      <div className="relative pt-28 px-6 lg:px-28 space-y-6">
         {/* Header with Sign Out Button */}
         <div className="flex justify-between items-center">
-          <Typography variant="h2" className="font-bold">Your Projects</Typography>
-          <Button onClick={handleSignOut} className="bg-red-500 hover:bg-red-700">
-            Sign Out
-          </Button>
+          <Typography variant="h2" className="font-bold text-white">Your Projects</Typography>
         </div>
 
         {/* Error Message */}
         {error && (
-          <Alert color="red" className="my-4">
+          <Alert color="red" className="bg-red-500/10 text-red-500 border border-red-500">
             {error}
           </Alert>
         )}
 
         {/* Create Project Button */}
         <Button 
-          className="flex items-center gap-2 bg-white text-black"
+          className="flex items-center gap-2 bg-white-500 hover:bg-white-600 shadow-lg transform hover:scale-105 transition-all"
           onClick={() => setOpenDialog(true)}
         >
           <PlusIcon className="h-5 w-5" /> Create New Project
@@ -154,7 +157,7 @@ function Project() {
         {projects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
-              <Card key={project.id} className="bg-gray-800 text-white">
+              <Card key={project.id} className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 hover:border-gray-600 transition-all shadow-xl text-white">
                 <CardBody>
                   <Typography variant="h5" className="mb-2">{project.name}</Typography>
                   <Typography className="text-gray-300 mb-4">
@@ -172,13 +175,14 @@ function Project() {
                 </CardBody>
                 <CardFooter className="pt-0 flex justify-between gap-2">
                   <Button 
-                    className="bg-white text-black flex-1"
+                    className="bg-white-500 hover:bg-white-600 shadow-lg transform hover:scale-105 transition-all flex items-center gap-2 flex-1"
                     onClick={() => handleOpenProject(project)}
                   >
                     Open Project
+                    <ArrowRightIcon className="h-4 w-4" />
                   </Button>
                   <Button 
-                    className="bg-red-500 text-white"
+                    className="bg-red-500 hover:bg-red-600 shadow-lg transform hover:scale-105 transition-all"
                     onClick={() => handleDeleteProject(project.id)}
                     disabled={deleteLoading === project.id}
                   >
@@ -194,12 +198,13 @@ function Project() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-10 bg-gray-800 rounded-lg">
-            <Typography className="mb-4">You don't have any projects yet.</Typography>
+          <div className="flex flex-col items-center justify-center py-10 bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50">
+            <Typography className="mb-4 text-gray-300">You don't have any projects yet.</Typography>
             <Button 
-              className="bg-white text-black"
+              className="bg-blue-500 hover:bg-blue-600 shadow-lg transform hover:scale-105 transition-all flex items-center gap-2"
               onClick={() => setOpenDialog(true)}
             >
+              <PlusIcon className="h-5 w-5" />
               Create Your First Project
             </Button>
           </div>
@@ -219,30 +224,30 @@ function Project() {
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
               required
-              className="text-white"
+              className="!border-gray-600 focus:!border-gray-900 bg-gray-800/50 text-white"
               labelProps={{
-                className: "text-white",
+                className: "text-gray-400",
               }}
             />
             <Textarea
               label="Project Description (Optional)"
               value={projectDescription}
               onChange={(e) => setProjectDescription(e.target.value)}
-              className="text-white"
+              className="!border-gray-600 focus:!border-gray-900 bg-gray-800/50 text-white"
               labelProps={{
-                className: "text-white",
+                className: "text-gray-400",
               }}
             />
             <div className="flex justify-end gap-2">
               <Button 
-                variant="outlined" 
-                color="red" 
+                variant="text"
+                className="text-gray-400 hover:bg-gray-800"
                 onClick={() => setOpenDialog(false)}
               >
                 Cancel
               </Button>
               <Button 
-                className="bg-white text-black"
+                className="bg-blue-500 hover:bg-blue-600 shadow-lg transform hover:scale-105 transition-all"
                 onClick={handleCreateProject}
               >
                 Create Project
