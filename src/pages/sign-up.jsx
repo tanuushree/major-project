@@ -8,6 +8,7 @@ import {
 } from "@material-tailwind/react";
 import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../services/api";
+import { toast } from "react-hot-toast";
 
 export function SignUp() {
   const [formData, setFormData] = useState({
@@ -21,11 +22,26 @@ export function SignUp() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    console.log('Form submission started:', {
+      name: formData.name,
+      email: formData.email,
+      password: '***'
+    });
 
     try {
+      console.log('Calling authService.register...');
       await authService.register(formData.name, formData.email, formData.password);
-      navigate('/');
+      console.log('Registration successful, navigating to sign-in...');
+      // Change navigation to sign-in page
+      navigate('/sign-in');
+      // Show success message
+      toast.success('Registration successful! Please sign in.');
     } catch (err) {
+      console.error('Registration error in component:', {
+        message: err.message,
+        error: err
+      });
       setError(err.message || 'Registration failed');
     }
   };
@@ -36,6 +52,7 @@ export function SignUp() {
         <img
           src="/img/sigin.jpeg"
           className="h-full w-full object-cover rounded-3xl"
+          alt="Sign up"
         />
       </div>
       <div className="w-full lg:w-3/5 flex flex-col items-center justify-center">
@@ -63,6 +80,7 @@ export function SignUp() {
               labelProps={{
                 className: "before:content-none after:content-none",
               }}
+              required
             />
           </div>
           
@@ -81,6 +99,7 @@ export function SignUp() {
                 className: "before:content-none after:content-none",
               }}
               autoComplete="email"
+              required
             />
           </div>
           
@@ -99,6 +118,7 @@ export function SignUp() {
                 className: "before:content-none after:content-none",
               }}
               autoComplete="new-password"
+              required
             />
           </div>
           
