@@ -5,7 +5,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true
+  // withCredentials: true
 });
 
 // Add a request interceptor
@@ -15,15 +15,45 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    console.log('🚀 Request:', {
+      url: config.url,
+      method: config.method,
+      headers: config.headers,
+      data: config.data ? { ...config.data, password: '***' } : undefined
+    });
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    console.error('❌ Request error:', error);
+    return Promise.reject(error);
+  }
 );
 
 // Add a response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('✅ Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      data: response.data,
+      headers: response.headers
+    });
+    return response;
+  },
   (error) => {
+    console.error('❌ Response error:', {
+      message: error.message,
+      response: error.response ? {
+        status: error.response.status,
+        data: error.response.data,
+        headers: error.response.headers
+      } : 'No response',
+      config: error.config ? {
+        url: error.config.url,
+        method: error.config.method,
+        headers: error.config.headers
+      } : 'No config'
+    });
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/sign-in';
@@ -47,14 +77,56 @@ export const authService = {
   },
 
   async register(name, email, password) {
+    console.log('Starting registration process...', { name, email });
     try {
-      const response = await api.post('/auth/register', { name, email, password });
+      console.log('Making registration request to:', `${api.defaults.baseURL}/auth/register`);
+      console.log('Request payload:', { name, email, password: '***' });
+
+      const response = await api.post('/auth/register', {
+        name,
+        email,
+        password
+      });
+
+      console.log('Registration response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+        data: response.data
+      });
+
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
       }
       return response.data;
     } catch (error) {
-      throw error.response?.data || error.message;
+      console.error('Registration error details:', {
+        error: error,
+        response: error.response,
+        request: error.request,
+        config: error.config
+      });
+
+      if (error.response) {
+        // Server responded with non-2xx status
+        console.error('Server error response:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+        throw new Error(error.response.data?.message || error.response.data?.error || 'Registration failed');
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error('No response received:', {
+          request: error.request,
+          config: error.config
+        });
+        throw new Error('No response from server. Please check your connection.');
+      } else {
+        // Error in request setup
+        console.error('Request setup error:', error.message);
+        throw new Error(`Request failed: ${error.message}`);
+      }
     }
   },
 
