@@ -44,7 +44,6 @@ function OpenForm() {
         setLoading(true);
         const fieldsData = await formService.getFieldsByForm(formId);
         console.log("Fetched fields:", fieldsData);
-
         if (fieldsData) {
           setFields(fieldsData);
           const initialData = {};
@@ -360,9 +359,7 @@ function OpenForm() {
             <Typography variant="h4" className="text-white">
               {formName}
             </Typography>
-            <Typography className="text-gray-400">
-              Project: {projectName}
-            </Typography>
+            
           </div>
           <Button
             onClick={() => navigate(`/project/${encodedProjectName}/form/${formId}/submissions`)}

@@ -156,11 +156,14 @@ export const formService = {
     }
   },
 
-  getFormSubmissions: async (formId, format ) => {
-    const response = await api.get(`/submissions/${formId}`, {
-      format: format
-    });
-    return response.data;
+  getFormSubmissions: async (formId, format = 'json') => {
+    try {
+      const response = await api.get(`/submissions/${formId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error in getFormSubmissions:', error);
+      throw error;
+    }
   },
 
   getSubmissionById: async (submissionId) => {
@@ -209,11 +212,10 @@ export const submissionService = {
     return response.data;
   },
 
-  getFieldSubmissions: async (params) => {
+  getFieldSubmissions: async () => {
     try {
-      const response = await api.post(`/submissions/field`, {
-        formName: params.formName,
-        fieldName: params.fieldName
+      const response = await api.post(`/submissions}/field`, {
+        fieldName
       });
       return response.data;
     } catch (error) {

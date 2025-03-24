@@ -4,6 +4,8 @@ import { Typography, Button, Card, Spinner, Alert, Menu, MenuHandler, MenuList, 
 import { formService, submissionService } from "../services/api";
 import { CloudArrowDownIcon } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
 
 function FormList() {
   const { projectName: encodedProjectName, formId } = useParams();
@@ -51,45 +53,91 @@ function FormList() {
 
   const handleDownload = async (formId, format) => {
     try {
-      console.log('Downloading submissions for form:', formId, 'format:', format); // Debug log
-      const response = await submissionService.getFormSubmissions(formId, format);
-      console.log('Response:', response); // Debug log
-      
-      // Convert the response data based on format
-      let blob;
-      let filename;
-      
-      if (format === 'csv') {
-        // Convert data to CSV string
-        const headers = Object.keys(response[0]?.data || {}).join(',');
-        const rows = response.map(submission => 
-          Object.values(submission.data).join(',')
-        ).join('\n');
-        const csvContent = `${headers}\n${rows}`;
+      console.log('Starting download for:', formId, 'format:', format); 
+
+      // Get submissions data for both PDF and CSV
+      const submissions = await submissionService.getFormSubmissions(formId);
+
+      if (format === 'pdf') {
+        // PDF generation code remains the same
+        const doc = new jsPDF();
+        doc.setFontSize(18);
+        doc.text("Submissions Report", 14, 20);
         
-        blob = new Blob([csvContent], { type: 'text/csv' });
-        filename = `form_${formId}_submissions.csv`;
-      } else {
-        // For PDF, just use JSON for now
-        const jsonContent = JSON.stringify(response, null, 2);
-        blob = new Blob([jsonContent], { type: 'application/json' });
-        filename = `form_${formId}_submissions.json`;
+        submissions.forEach((submission, index) => {
+          const yPosition = 40 + (index * 40);
+          
+          doc.setFontSize(12);
+          doc.text(`Submission ${index + 1}`, 14, yPosition);
+          doc.setFontSize(10);
+          doc.text(`Submitted on: ${new Date(submission.createdAt).toLocaleString()}`, 14, yPosition + 7);
+          
+          const data = submission.data || {};
+          Object.entries(data).forEach(([key, value], dataIndex) => {
+            doc.text(`${key}: ${value}`, 14, yPosition + 14 + (dataIndex * 7));
+          });
+          
+          if (index < submissions.length - 1) {
+            doc.line(14, yPosition + 30, 196, yPosition + 30);
+          }
+          
+          if (yPosition > 250 && index < submissions.length - 1) {
+            doc.addPage();
+          }
+        });
+        
+        doc.save(`form_${formId}_submissions.pdf`);
+        toast.success('Download successful: PDF');
+        
+      } else if (format === 'csv') {
+        // Generate CSV from submissions
+        const csvRows = [];
+        
+        // Get all unique fields from all submissions
+        const allFields = new Set();
+        submissions.forEach(submission => {
+          const data = submission.data || {};
+          Object.keys(data).forEach(key => allFields.add(key));
+        });
+        
+        // Create header row
+        const headers = ['Submission Date', ...Array.from(allFields)];
+        csvRows.push(headers.join(','));
+        
+        // Add data rows
+        submissions.forEach(submission => {
+          const data = submission.data || {};
+          const row = [
+            new Date(submission.createdAt).toLocaleString(),
+            ...Array.from(allFields).map(field => {
+              const value = data[field] || '';
+              // Escape quotes and wrap in quotes if contains comma
+              return value.toString().includes(',') 
+                ? `"${value.replace(/"/g, '""')}"` 
+                : value;
+            })
+          ];
+          csvRows.push(row.join(','));
+        });
+        
+        // Create and download CSV file
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `form_${formId}_submissions.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        toast.success('Download successful: CSV');
       }
-
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-
-      toast.success('Download successful!');
     } catch (error) {
-      console.error('Error downloading submissions:', error);
-      toast.error('Failed to download submissions');
+      console.error(`Error downloading ${format}:`, error);
+      console.error('Error details:', error.message);
+      toast.error(`Failed to download ${format.toUpperCase()}: ${error.message}`);
     }
   };
 
