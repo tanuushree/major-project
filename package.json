@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@heroicons/react": "2.0.18",
-    "@material-tailwind/react": "2.1.4",
+    "@material-tailwind/react": "^2.1.4",
     "axios": "^1.8.4",
     "chart.js": "^4.4.1",
     "jspdf": "^3.0.1",
@@ -24,6 +24,7 @@
     "react-scroll-motion": "^0.3.5",
     "react-scroll-trigger": "^0.6.14",
     "react-toastify": "^11.0.5",
+    "recharts": "^2.15.1",
     "run-script": "^0.1.1",
     "uuid": "^11.0.5"
   },

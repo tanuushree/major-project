@@ -49,6 +49,13 @@ export function Dashboard() {
   const [submissions, setSubmissions] = useState([]);
   const [timePeriod, setTimePeriod] = useState("Last 30 days");
   const [chartView, setChartView] = useState("Monthly");
+  const [stats, setStats] = useState({
+    totalForms: 0,
+    totalSubmissions: 0,
+    submissionsToday: 0,
+    averageSubmissionsPerForm: 0,
+    activeFormCount: 0
+  });
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -60,14 +67,39 @@ export function Dashboard() {
         
         // Get submissions for each form
         const allSubmissions = [];
-        const allFormId = [];
-        // console.log(formsData);
         for (const form of formsData) {
-          // console.log(form.id);
           const formSubmissions = await formService.getFormSubmissions(form.id);
           allSubmissions.push(...formSubmissions);
         }
         setSubmissions(allSubmissions);
+
+        // Calculate additional statistics
+        const today = new Date().toISOString().split('T')[0];
+        const submissionsToday = allSubmissions.filter(sub => 
+          sub.createdAt.startsWith(today)
+        ).length;
+
+        const averageSubmissionsPerForm = formsData.length ? 
+          (allSubmissions.length / formsData.length).toFixed(2) : 0;
+
+        // Count forms with submissions in the last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const activeFormCount = formsData.filter(form => 
+          allSubmissions.some(sub => 
+            new Date(sub.createdAt) > thirtyDaysAgo && 
+            sub.form_id === form.id
+          )
+        ).length;
+
+        setStats({
+          totalForms: formsData.length,
+          totalSubmissions: allSubmissions.length,
+          submissionsToday,
+          averageSubmissionsPerForm,
+          activeFormCount
+        });
+
       } catch (error) {
         console.error('Error fetching analytics data:', error);
       } finally {
@@ -78,20 +110,35 @@ export function Dashboard() {
     fetchAnalytics();
   }, [projectId]);
 
-  const stats = [
+  const statsCards = [
     {
       title: "Total Forms",
-      value: forms.length || 0,
+      value: stats.totalForms,
       icon: <DocumentIcon className="h-6 w-6" />,
     },
     {
       title: "Total Submissions",
-      value: submissions.length || 0,
+      value: stats.totalSubmissions,
       icon: <ClipboardDocumentListIcon className="h-6 w-6" />,
+    },
+    {
+      title: "Submissions Today",
+      value: stats.submissionsToday,
+      icon: <CalendarIcon className="h-6 w-6" />,
+    },
+    {
+      title: "Active Forms",
+      value: stats.activeFormCount,
+      icon: <ChartBarIcon className="h-6 w-6" />,
+      description: "Forms with submissions in last 30 days"
+    },
+    {
+      title: "Avg Submissions/Form",
+      value: stats.averageSubmissionsPerForm,
+      icon: <TableCellsIcon className="h-6 w-6" />,
     },
   ];
 
-  // Updated getChartData function to include forms data
   const getChartData = () => {
     const filterDate = new Date();
     switch (timePeriod) {
@@ -108,74 +155,90 @@ export function Dashboard() {
         filterDate.setDate(filterDate.getDate() - 30);
     }
 
-    // Filter submissions based on date
-    const filteredSubmissions = submissions.filter(submission => 
-      new Date(submission.createdAt) > filterDate
-    );
-
-    // Filter forms based on date (assuming forms have a createdAt field)
-    const filteredForms = forms.filter(form => 
-      new Date(form.createdAt) > filterDate
-    );
+    // Filter and sort submissions by date
+    const filteredSubmissions = submissions
+      .filter(submission => new Date(submission.createdAt) > filterDate)
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
     // Group by date according to chartView
-    const groupedSubmissions = {};
-    const groupedForms = {};
+    const submissionsByDate = {};
+    let cumulativeCount = 0;
 
-    // Helper function to get the key based on date and chartView
     const getKey = (date) => {
       switch (chartView) {
         case "Monthly":
-          return `${date.getFullYear()}-${date.getMonth() + 1}`;
+          return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         case "Weekly":
           const weekNumber = Math.ceil((date.getDate() + 
             new Date(date.getFullYear(), date.getMonth(), 1).getDay()) / 7);
           return `Week ${weekNumber}, ${date.getMonth() + 1}/${date.getFullYear()}`;
         case "Daily":
         default:
-          return date.toLocaleDateString();
+          return date.toISOString().split('T')[0];
       }
     };
 
-    // Group submissions
+    // Calculate cumulative submissions
     filteredSubmissions.forEach(submission => {
       const date = new Date(submission.createdAt);
       const key = getKey(date);
-      groupedSubmissions[key] = (groupedSubmissions[key] || 0) + 1;
+      
+      if (!submissionsByDate[key]) {
+        submissionsByDate[key] = cumulativeCount;
+      }
+      cumulativeCount += 1;
+      submissionsByDate[key] = cumulativeCount;
     });
 
-    // Group forms
-    filteredForms.forEach(form => {
-      const date = new Date(form.createdAt);
-      const key = getKey(date);
-      groupedForms[key] = (groupedForms[key] || 0) + 1;
-    });
+    // Create an array of dates between filter date and now
+    const dates = [];
+    const currentDate = new Date(filterDate);
+    const endDate = new Date();
+    
+    while (currentDate <= endDate) {
+      const key = getKey(currentDate);
+      dates.push(key);
+      
+      switch (chartView) {
+        case "Monthly":
+          currentDate.setMonth(currentDate.getMonth() + 1);
+          break;
+        case "Weekly":
+          currentDate.setDate(currentDate.getDate() + 7);
+          break;
+        case "Daily":
+          currentDate.setDate(currentDate.getDate() + 1);
+          break;
+      }
+    }
 
-    // Get all unique dates
-    const allDates = [...new Set([...Object.keys(groupedSubmissions), ...Object.keys(groupedForms)])].sort();
+    // Fill in missing dates with previous cumulative count
+    let lastCount = 0;
+    const completeData = dates.map(date => {
+      if (submissionsByDate[date] !== undefined) {
+        lastCount = submissionsByDate[date];
+      }
+      return {
+        date,
+        count: lastCount
+      };
+    });
 
     return {
-      labels: allDates,
+      labels: completeData.map(item => item.date),
       datasets: [
         {
-          label: 'Form Submissions',
-          data: allDates.map(date => groupedSubmissions[date] || 0),
-          backgroundColor: 'rgba(99, 102, 241, 0.5)',
+          label: 'Total Submissions',
+          data: completeData.map(item => item.count),
           borderColor: 'rgb(99, 102, 241)',
-          borderWidth: 1,
-        },
-        {
-          label: 'Total Forms',
-          data: allDates.map(date => groupedForms[date] || 0),
-          backgroundColor: 'rgba(14, 165, 233, 0.5)',
-          borderColor: 'rgb(14, 165, 233)',
-          borderWidth: 1,
+          backgroundColor: 'rgba(99, 102, 241, 0.1)',
+          tension: 0.4,
+          fill: true,
         }
       ],
     };
   };
 
-  // Updated chart options to better handle multiple datasets
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -185,11 +248,16 @@ export function Dashboard() {
       },
       title: {
         display: true,
-        text: 'Forms and Submissions Analytics'
+        text: 'Cumulative Submissions Growth'
       },
       tooltip: {
         mode: 'index',
         intersect: false,
+        callbacks: {
+          label: function(context) {
+            return `Total Submissions: ${context.parsed.y}`;
+          }
+        }
       }
     },
     scales: {
@@ -197,13 +265,13 @@ export function Dashboard() {
         beginAtZero: true,
         title: {
           display: true,
-          text: 'Count'
+          text: 'Total Submissions'
         }
       },
       x: {
         title: {
           display: true,
-          text: 'Date'
+          text: chartView
         }
       }
     },
@@ -212,6 +280,169 @@ export function Dashboard() {
       axis: 'x',
       intersect: false
     }
+  };
+
+  // Update the getFormSubmissionsData function to use form names from forms data
+  const getFormSubmissionsData = () => {
+    // Create a map of form titles and their submission counts
+    const formSubmissionCounts = forms.map(form => {
+      const submissionCount = submissions.filter(sub => sub.form_id === form.id).length;
+      return {
+        title: form.name || 'Untitled Form',
+        count: submissionCount,
+        id: form.id
+      };
+    });
+
+    // Sort by submission count in descending order
+    formSubmissionCounts.sort((a, b) => b.count - a.count);
+
+    console.log('Form submission data:', formSubmissionCounts); // Debug log
+
+    return {
+      labels: formSubmissionCounts.map(form => form.title),
+      datasets: [
+        {
+          label: 'Submissions per Form',
+          data: formSubmissionCounts.map(form => form.count),
+          backgroundColor: 'rgba(14, 165, 233, 0.5)',
+          borderColor: 'rgb(14, 165, 233)',
+          borderWidth: 1,
+        }
+      ]
+    };
+  };
+
+  // Update bar chart options to handle longer form names
+  const barChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: true,
+        text: 'Submissions by Form'
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            return `Submissions: ${context.parsed.y}`;
+          },
+          title: function(context) {
+            return context[0].label || 'Untitled Form';
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: 'Number of Submissions'
+        }
+      },
+      x: {
+        title: {
+          display: true,
+          text: 'Forms'
+        },
+        ticks: {
+          maxRotation: 45,
+          minRotation: 45,
+          callback: function(value, index) {
+            const label = this.getLabelForValue(value);
+            // Truncate long form names
+            return label.length > 20 ? label.substr(0, 17) + '...' : label;
+          }
+        }
+      }
+    }
+  };
+
+  // Add these new chart functions
+
+  // 1. Time of Day Analysis
+  const getTimeOfDayData = () => {
+    const hourlySubmissions = new Array(24).fill(0);
+    
+    submissions.forEach(submission => {
+      const hour = new Date(submission.createdAt).getHours();
+      hourlySubmissions[hour]++;
+    });
+
+    return {
+      labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+      datasets: [{
+        label: 'Submissions by Hour',
+        data: hourlySubmissions,
+        backgroundColor: 'rgba(99, 102, 241, 0.5)',
+        borderColor: 'rgb(99, 102, 241)',
+        borderWidth: 1
+      }]
+    };
+  };
+
+  // 2. Weekly Pattern Analysis
+  const getWeeklyPatternData = () => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const daySubmissions = new Array(7).fill(0);
+    
+    submissions.forEach(submission => {
+      const day = new Date(submission.createdAt).getDay();
+      daySubmissions[day]++;
+    });
+
+    return {
+      labels: days,
+      datasets: [{
+        label: 'Submissions by Day of Week',
+        data: daySubmissions,
+        backgroundColor: 'rgba(14, 165, 233, 0.5)',
+        borderColor: 'rgb(14, 165, 233)',
+        borderWidth: 1
+      }]
+    };
+  };
+
+  // 3. Form Completion Time Analysis (if you have start/end time data)
+  const getCompletionTimeData = () => {
+    const timeRanges = ['0-1 min', '1-3 min', '3-5 min', '5-10 min', '10+ min'];
+    // This is mock data - replace with actual completion time calculation
+    const completionTimes = [10, 25, 30, 20, 15];
+
+    return {
+      labels: timeRanges,
+      datasets: [{
+        label: 'Form Completion Time Distribution',
+        data: completionTimes,
+        backgroundColor: 'rgba(34, 197, 94, 0.5)',
+        borderColor: 'rgb(34, 197, 94)',
+        borderWidth: 1
+      }]
+    };
+  };
+
+  // 4. Recent Activity Timeline
+  const getRecentActivityData = () => {
+    const recentSubmissions = submissions
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 10);
+
+    return {
+      labels: recentSubmissions.map(sub => 
+        new Date(sub.createdAt).toLocaleDateString()
+      ),
+      datasets: [{
+        label: 'Recent Submissions',
+        data: recentSubmissions.map(() => 1),
+        backgroundColor: 'rgba(249, 115, 22, 0.5)',
+        borderColor: 'rgb(249, 115, 22)',
+        borderWidth: 1
+      }]
+    };
   };
 
   if (loading) {
@@ -252,8 +483,8 @@ export function Dashboard() {
               </div>
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2">
-                {stats.map((stat) => (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {statsCards.map((stat) => (
                   <Card key={stat.title} className="border border-blue-gray-100 shadow-sm">
                     <div className="p-4">
                       <div className="flex items-center gap-4">
@@ -267,6 +498,11 @@ export function Dashboard() {
                           <Typography variant="h4" color="blue-gray" className="font-semibold">
                             {stat.value}
                           </Typography>
+                          {stat.description && (
+                            <Typography variant="small" color="gray" className="font-normal">
+                              {stat.description}
+                            </Typography>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -295,10 +531,110 @@ export function Dashboard() {
                   </div>
                 </div>
                 <div className="h-[400px]">
-                  <Bar data={getChartData()} options={chartOptions} />
+                  <Line data={getChartData()} options={chartOptions} />
                 </div>
               </div>
             </Card>
+
+            {/* Add spacing between charts */}
+            <div className="mb-8"></div>
+
+            {/* New Bar Chart */}
+            <Card className="border border-blue-gray-100 shadow-sm">
+              <div className="p-6">
+                <div className="mb-6">
+                  <Typography variant="h6" color="blue-gray">
+                    Submissions by Form
+                  </Typography>
+                </div>
+                <div className="h-[400px]">
+                  <Bar 
+                    data={getFormSubmissionsData()} 
+                    options={barChartOptions} 
+                  />
+                </div>
+              </div>
+            </Card>
+
+            {/* New Analytics Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              {/* Time of Day Analysis */}
+              <Card className="border border-blue-gray-100 shadow-sm">
+                <div className="p-6">
+                  <Typography variant="h6" color="blue-gray" className="mb-4">
+                    Submission Time Patterns
+                  </Typography>
+                  <div className="h-[300px]">
+                    <Bar data={getTimeOfDayData()} options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        title: { display: true, text: 'Submissions by Hour of Day' }
+                      }
+                    }} />
+                  </div>
+                </div>
+              </Card>
+
+              {/* Weekly Pattern Analysis */}
+              <Card className="border border-blue-gray-100 shadow-sm">
+                <div className="p-6">
+                  <Typography variant="h6" color="blue-gray" className="mb-4">
+                    Weekly Submission Patterns
+                  </Typography>
+                  <div className="h-[300px]">
+                    <Bar data={getWeeklyPatternData()} options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        title: { display: true, text: 'Submissions by Day of Week' }
+                      }
+                    }} />
+                  </div>
+                </div>
+              </Card>
+
+              {/* Form Completion Time */}
+              <Card className="border border-blue-gray-100 shadow-sm">
+                <div className="p-6">
+                  <Typography variant="h6" color="blue-gray" className="mb-4">
+                    Form Completion Time
+                  </Typography>
+                  <div className="h-[300px]">
+                    <Bar data={getCompletionTimeData()} options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        title: { display: true, text: 'Time Spent on Forms' }
+                      }
+                    }} />
+                  </div>
+                </div>
+              </Card>
+
+              {/* Recent Activity */}
+              <Card className="border border-blue-gray-100 shadow-sm">
+                <div className="p-6">
+                  <Typography variant="h6" color="blue-gray" className="mb-4">
+                    Recent Activity
+                  </Typography>
+                  <div className="h-[300px]">
+                    <Bar data={getRecentActivityData()} options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        title: { display: true, text: 'Latest Submissions' }
+                      },
+                      scales: {
+                        y: {
+                          display: false
+                        }
+                      }
+                    }} />
+                  </div>
+                </div>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
