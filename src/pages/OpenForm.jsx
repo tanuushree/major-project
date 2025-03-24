@@ -37,6 +37,7 @@ function OpenForm() {
   const [referenceFieldValues, setReferenceFieldValues] = useState({});
   const [fieldOptions, setFieldOptions] = useState({});
   const [referenceFieldOptions, setReferenceFieldOptions] = useState({});
+  const [isOnline, setIsOnline] = useState(window.navigator.onLine);
 
   useEffect(() => {
     const fetchFormFields = async () => {
@@ -138,26 +139,100 @@ function OpenForm() {
     }));
   };
 
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      console.log('Internet connection restored');
+      processPendingSubmissions(); // Directly call here instead of relying on state change
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      console.log('Internet connection lost');
+    };
+
+    // Add event listeners
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Process any pending submissions when component mounts and is online
+    if (window.navigator.onLine) {
+      processPendingSubmissions();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []); // Empty dependency array since we want this to run only on mount
+
+  const saveToLocalStorage = (submissionData) => {
+    const pendingSubmissions = JSON.parse(localStorage.getItem('pendingFormSubmissions') || '[]');
+    pendingSubmissions.push(submissionData);
+    localStorage.setItem('pendingFormSubmissions', JSON.stringify(pendingSubmissions));
+  };
+
+  const processPendingSubmissions = async () => {
+    const pendingSubmissions = JSON.parse(localStorage.getItem('pendingFormSubmissions') || '[]');
+    console.log('Processing pending submissions:', pendingSubmissions);
+    
+    if (pendingSubmissions.length === 0) {
+      console.log('No pending submissions found');
+      return;
+    }
+
+    let successCount = 0;
+    for (let i = pendingSubmissions.length - 1; i >= 0; i--) {
+      try {
+        console.log(`Attempting to submit pending form ${i + 1}/${pendingSubmissions.length}`);
+        await formService.submitFormResponse(pendingSubmissions[i]);
+        successCount++;
+        pendingSubmissions.splice(i, 1);
+        localStorage.setItem('pendingFormSubmissions', JSON.stringify(pendingSubmissions));
+        toast.success(`Successfully submitted pending form ${i + 1}`);
+      } catch (err) {
+        console.error('Failed to submit pending form:', err);
+        toast.error(`Failed to submit pending form ${i + 1}`);
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`Successfully submitted ${successCount} pending form(s)`);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
 
-    try {
-      const submissionData = {
-        form_id: formId,
-        data: formData,
-      };
+    const submissionData = {
+      form_id: formId,
+      data: formData,
+    };
 
+    if (!isOnline) {
+      saveToLocalStorage(submissionData);
+      toast.success('Form saved offline. Will be submitted when internet connection is restored.');
+      setSubmitted(true);
+      setSubmitting(false);
+      return;
+    }
+
+    try {
       console.log("Submitting data:", submissionData);
       await formService.submitFormResponse(submissionData);
+      
+      await processPendingSubmissions();
 
-      alert("Form submitted successfully!");
+      toast.success("Form submitted successfully!");
       setSubmitted(true);
-
     } catch (err) {
       console.error("Error submitting form:", err);
       setError(err.message || "Failed to submit form");
+      
+      saveToLocalStorage(submissionData);
+      toast.warning('Form saved offline. Will be submitted when internet connection is restored.');
     } finally {
       setSubmitting(false);
     }
