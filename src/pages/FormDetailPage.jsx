@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button, Card, Input, Select, Option, Dialog, Alert, Spinner } from "@material-tailwind/react";
 import { formService } from "../services/api";
+import { toast } from "react-hot-toast";
+import { LinkIcon } from "@heroicons/react/24/solid";
 
 function FormDetailPage() {
   const { projectName: encodedProjectName, formId } = useParams();
@@ -76,38 +78,27 @@ function FormDetailPage() {
     setError(null);
 
     try {
-      const fieldsData = fields.map(field => {
-        const fieldData = {
-          label: field.label,
-          type: field.type.toLowerCase(),
-          required: field.required,
-          is_primary_key: field.is_primary_key,
-          form_name: field.type.toLowerCase() === "form reference" ? field.form_name : null
-        };
-        console.log("Processing field:", fieldData);
-        return fieldData;
-      });
+      const fieldsData = fields.map(field => ({
+        label: field.label,
+        type: field.type.toLowerCase(),
+        required: field.required,
+        is_primary_key: field.is_primary_key,
+        form_name: field.type.toLowerCase() === "form reference" ? field.form_name : null
+      }));
 
-      console.log("Full fields data being sent:", fieldsData);
       const response = await formService.saveForm(formId, fieldsData);
-      console.log(response);
 
       if (response.fields) {
-        console.log("Setting fields from response:", response.fields);
         setFields(response.fields.map(field => ({
           ...field,
-          // Ensure form_name is preserved from the response
           form_name: field.type.toLowerCase() === "form reference" ? field.form_name : null
         })));
-      } else {
-        console.log("No fields in response, keeping existing fields");
-        setFields(fields);
       }
       
       setSuccessMessage("Form saved successfully!");
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
-      console.error("Detailed save error:", err);
+      console.error("Save error:", err);
       setError("Failed to save form");
     } finally {
       setSaving(false);
@@ -251,6 +242,28 @@ function FormDetailPage() {
     }
   };
 
+  const handleCopyLink = () => {
+    const formLink = `${window.location.origin}/project/${encodedProjectName}/form/${formId}/submissions`;
+    
+    navigator.clipboard.writeText(formLink)
+      .then(() => {
+        toast.success('Form link copied to clipboard!');
+      })
+      .catch(err => {
+        console.error('Failed to copy link:', err);
+        toast.error('Failed to copy link');
+      });
+  };
+
+  const handleBackToForm = () => {
+    navigate(`/project/${encodedProjectName}/form/${formId}`, {
+      state: { 
+        formName: formName,
+        projectId: projectId 
+      }
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-black">
@@ -269,10 +282,10 @@ function FormDetailPage() {
             <h2 className="text-lg text-gray-300">{formName}</h2>
           </div>
           <Button 
-            onClick={() => navigate(`/${encodedProjectName}`)} 
+            onClick={handleBackToForm} 
             className="text-black bg-white w-full sm:w-auto"
           >
-            Back to Forms
+            Back to Form
           </Button>
         </div>
 
@@ -296,6 +309,13 @@ function FormDetailPage() {
             className="bg-blue-500 hover:bg-blue-600"
           >
             Open Form
+          </Button>
+          <Button
+            onClick={handleCopyLink}
+            className="bg-white text-black w-full sm:w-auto flex items-center gap-2"
+          >
+            <LinkIcon className="h-4 w-4" />
+            Copy Link
           </Button>
           <Button
             onClick={handleSave}

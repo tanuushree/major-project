@@ -195,13 +195,6 @@ function FormList() {
                 </MenuItem>
               </MenuList>
             </Menu>
-            <Button
-              onClick={() => navigate(`/project/${encodedProjectName}/form/${formId}`)}
-              className="bg-white text-black hover:bg-gray-200 flex items-center gap-2 shadow-lg transform hover:scale-105 transition-all"
-            >
-              <ArrowLeftIcon className="h-4 w-4" />
-              Back to Form
-            </Button>
           </div>
         </div>
 
