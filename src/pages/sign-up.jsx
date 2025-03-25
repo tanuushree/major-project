@@ -8,7 +8,6 @@ import {
 } from "@material-tailwind/react";
 import { Link, useNavigate } from "react-router-dom";
 import { authService } from "../services/api";
-import { toast } from "react-hot-toast";
 
 export function SignUp() {
   const [formData, setFormData] = useState({
@@ -22,27 +21,23 @@ export function SignUp() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
-    console.log('Form submission started:', {
-      name: formData.name,
-      email: formData.email,
-      password: '***'
-    });
 
     try {
-      console.log('Calling authService.register...');
       await authService.register(formData.name, formData.email, formData.password);
-      console.log('Registration successful, navigating to sign-in...');
-      // Change navigation to sign-in page
-      navigate('/sign-in');
-      // Show success message
-      toast.success('Registration successful! Please sign in.');
+      navigate("/projects");
     } catch (err) {
-      console.error('Registration error in component:', {
-        message: err.message,
-        error: err
-      });
-      setError(err.message || 'Registration failed');
+      console.error('Registration error:', err);
+      // Handle different error response formats
+      if (err.response) {
+        // Server responded with error
+        setError(err.response.data?.error || err.response.data?.message || 'Registration failed');
+      } else if (err.request) {
+        // Request was made but no response
+        setError('No response from server. Please try again.');
+      } else {
+        // Something else went wrong
+        setError(err.message || 'Registration failed');
+      }
     }
   };
 
